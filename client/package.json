@@ -1,34 +1,34 @@
 {
-    "name": "cranberry-client",
-    "version": "0.0.1",
-    "private": true,
-    "scripts": {
-      "dev": "next dev",
-      "build": "next build",
-      "start": "next start",
-      "lint": "next lint",
-      "lint:fix": "next lint --fix",
-      "format": "prettier --write .",
-      "format:check": "prettier --check ."
-    },
-    "dependencies": {
-        "prettier": "^3.4.2",
-        "zod": "^3.24.1",
-        "lucide-react": "^0.469.0"
-    },
-    "devDependencies": {
-        "@tailwindcss/typography": "^0.5.16",
-        "@types/node": "^20",
-        "@types/react": "^18",
-        "@types/react-dom": "^18",
-        "@types/react-syntax-highlighter": "^15.5.13",
-        "eslint": "^8",
-        "eslint-config-next": "14.2.16",
-        "postcss": "^8",
-        "tailwind-scrollbar": "^2.0.1",
-        "tailwindcss": "^3.4.1",
-        "typescript": "^5"
-    },
-    "packageManager": "pnpm@9.12.3+sha512.cce0f9de9c5a7c95bef944169cc5dfe8741abfb145078c0d508b868056848a87c81e626246cb60967cbd7fd29a6c062ef73ff840d96b3c86c40ac92cf4a813ee"
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.476.0",
+    "next": "15.2.0-canary.75",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.0.2",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.2.0-canary.75",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
-  
+}
