@@ -2,3 +2,5 @@ langgraph
 langchain-community
 langchain-openai
 tavily-python
+tenseal
+sentence_transformers
