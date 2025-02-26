@@ -123,6 +123,28 @@ async def add_vector(store_id: str, input: Entry) -> VectorStoreResponse:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/vector-stores/{store_id}/similarity-search")
+async def similarity_search(store_id: str, input: Entry, top_k: int = 3) -> VectorStoreResponse:
+    '''
+    Search for vectors in a vector store by similarity
+    @param store_id: str
+    @param input: Entry
+        encrypted_text: str
+        encrypted_vector: tenseal.ckks_vector
+    @param top_k: int
+        The number of results to return
+    @return VectorStoreResponse
+        results: {id: str, encrypted_text: str, similarity: float}
+    '''
+    try:
+        if store_id not in storage:
+            raise HTTPException(status_code=404, detail="Vector store not found")
+        vector_store = storage.get(store_id)
+        similarity = vector_store.cosine_similarity(input.encrypted_vector, top_k)
+        return {"results": similarity}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.delete("/vector-stores")
 async def clear_vector_stores():
     '''

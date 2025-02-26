@@ -10,7 +10,8 @@ class StorageEntity:
     def insert(self, encrypted_vector_store: EncryptedVectorStore):
         id = encrypted_vector_store.id
         self.row[id] = encrypted_vector_store
-
+        return f"Vector store {id} created"
+    
     def __len__(self):
         return len(self.row)
     
