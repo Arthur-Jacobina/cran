@@ -1,4 +1,4 @@
-# Cranberry
+# Cranberry 🔴
 
 Cranberry or Cran is here to be your AI girlfriend.
 
