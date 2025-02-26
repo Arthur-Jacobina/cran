@@ -1,4 +1,5 @@
 from embeddings import embed
+from encrypted_vector_store import Entry
 
 class UpsertPipeline:
     def __init__(self, vector_store):
@@ -15,7 +16,7 @@ class UpsertPipeline:
     
     def upsert(self, text):
         vector = embed(text)
-        self.vector_store.add_vector(vector)
+        self.vector_store.add_vector(Entry(text, vector))
         return self.vector_store
     
     def upsert_many(self, texts):
