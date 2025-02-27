@@ -15,6 +15,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    // Ensure uploads directory exists
+    const uploadsDir = path.join(process.cwd(), 'public/uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
     // Save file to a temporary path
     const buffer = Buffer.from(await file.arrayBuffer());
     const tempFilePath = path.join(
@@ -30,6 +36,8 @@ export async function POST(req: NextRequest) {
       file: fs.createReadStream(tempFilePath),
       model: 'whisper-1',
     });
+
+    console.log(transcription.text);
 
     // Delete the temp file after processing
     await unlink(tempFilePath);
