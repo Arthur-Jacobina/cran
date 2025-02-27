@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Optional
-from .storage_entities import StorageEntity
-from encryption.encrypted_vector_store import EncryptedVectorStore, Entry
-from encryption.upsert import UpsertPipeline
+from ..structures.storage_entities import StorageEntity
+from server.structures.encrypted_vector_store import EncryptedVectorStore, Entry
+from server.structures.upsert_pipeline import UpsertPipeline
 import tenseal as ts
 
 app = FastAPI(title="Cranberry Storage", root_path="/api/v1/")
