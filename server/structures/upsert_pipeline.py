@@ -1,5 +1,5 @@
-from embeddings import embed
-from encrypted_vector_store import Entry
+from utils.embeddings import embed
+from server.structures.encrypted_vector_store import Entry
 
 class UpsertPipeline:
     def __init__(self, vector_store):

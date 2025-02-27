@@ -1,19 +1,14 @@
-import tiktoken
 import os
 from pinecone import Pinecone, ServerlessSpec
 from sentence_transformers import SentenceTransformer
 import uuid
+from .entry import Entry
+from dotenv import load_dotenv
 
 MAX_TOKENS = 120000.0
 AVAILABLE_TOKENS = MAX_TOKENS*0.7
 
-class Entry:
-    def __init__(self, role: str, content: str):
-        self.role = role
-        self.content = content
-        self.tokenizer = tiktoken.encoding_for_model("gpt-4o")
-        self.tokens = len(self.tokenizer.encode(self.content))
-        
+load_dotenv()
 
 class WorkingContext:
     def __init__(self, agent_id: str):
@@ -21,7 +16,7 @@ class WorkingContext:
         self.system = []
         self.agent_id = agent_id
         self.pc = Pinecone(
-            api_key="pcsk_5KXDNL_79c5jMV2LnN6AR48Yx1G24iuAyBTWzq2p3JKGqG78wC1JjaKiigG1zRCFzTsMdH"
+            api_key=os.getenv("PINECONE_API_KEY")
         )
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -34,12 +29,12 @@ class WorkingContext:
     def __call__(self) -> str:
         return self.memory
     
-    def shift(self):
+    def _shift(self):
         if self.memory:
             return self.memory.pop(0)
         raise ValueError("No memory to shift")
     
-    def add_memory(self, entry: Entry):
+    def _add_memory(self, entry: Entry):
         if sum([e.tokens for e in self.memory]) + entry.tokens > AVAILABLE_TOKENS:
             print(f"Not enough tokens to add memory. Current tokens: {sum([e.tokens for e in self.memory])}, available tokens: {AVAILABLE_TOKENS}")
             while sum([e.tokens for e in self.memory]) + entry.tokens > 0.5*AVAILABLE_TOKENS:
@@ -74,18 +69,15 @@ class WorkingContext:
             print(f"Error checking/creating index: {e}")
             return False
 
-    def insert_to_long_term(self, entry: Entry):
+    def _insert_to_long_term(self, entry: Entry):
         try:
-            # Ensure index exists
             if not self._ensure_index_exists():
                 return f"Failed to ensure index exists for agent {self.agent_id}"
             
-            # Get the index
             index = self.pc.Index(name=self.agent_id)
             
             embed = self.model.encode(entry.content)
             
-            # Upsert the vector with metadata
             index.upsert(
                 vectors=[
                     {
@@ -100,7 +92,7 @@ class WorkingContext:
         except Exception as e:
             return f"Error inserting memory to long term memory: {e}"
     
-    def get_from_long_term(self, query: str, top_k: int = 3):
+    def _get_from_long_term(self, query: str, top_k: int = 3):
         try:
             if not self._ensure_index_exists():
                 return f"No long term memory found for agent {self.agent_id}"
@@ -118,3 +110,19 @@ class WorkingContext:
             return results
         except Exception as e:
             return f"Error getting from long term memory: {e}"
+
+    def _add_system_message(self, message: str):
+        self.system.append(Entry("system", message))
+        return f"System message added successfully."
+    
+    def _get_system_message(self):
+        return self.system
+    
+    def _remove_system_message(self, message: str):
+        self.system = [m for m in self.system if m.content != message]
+        return f"System message removed successfully."
+    
+    def _clear_system_messages(self):
+        self.system = []
+        return f"System messages cleared successfully."
+
