@@ -3,9 +3,7 @@ import { Button } from './ui/button';
 import { useState } from 'react';
 import { error } from 'console';
 
-const [isRecording, setIsRecording] = useState(false);
-
-async function handleRecording(){
+export async function handleRecording(){
     const options = { mimeType: "video/webm"}
     const stream = await navigator
     .mediaDevices
@@ -15,7 +13,6 @@ async function handleRecording(){
         mediaRecorder.addEventListener('click', function (){
             try{
                 mediaRecorder.start();
-                setIsRecording(true);
                 console.log('recording started!')
             }catch(e){
                 console.log(e);
@@ -24,12 +21,4 @@ async function handleRecording(){
     }).catch((error) => {
         console.error(`Error when capturing user audio ${error}`);
         });
-}
-
-function AudioButton() {
-    return (
-        <Button type="button" variant="outline" onClick={() => handleRecording()}>
-            <MicIcon className="w-4 h-4" />
-        </Button>
-    )
 }

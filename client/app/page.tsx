@@ -4,11 +4,11 @@ import { useChat } from '@ai-sdk/react';
 import { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { handleRecording } from '@/components/audio';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageIcon, MicIcon, SendIcon } from 'lucide-react';
 import fs from "fs";
 import OpenAI from "openai";
-
 
 export default function Chat() {
   const { messages, input, handleInputChange, handleSubmit } = useChat();
@@ -84,7 +84,7 @@ export default function Chat() {
             <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
               <ImageIcon className="w-4 h-4" />
             </Button>
-            <Button type="button" variant="outline" onClick={() => audioInputRef.current?.click()}>
+            <Button type="button" variant="outline" onClick={() => handleRecording()}>
               <MicIcon className="w-4 h-4" />
             </Button>
             <Button type="submit" disabled={isTyping}>
