@@ -21,12 +21,58 @@ async function getWaifuImage() {
 export default function Home() {
   const router = useRouter();
   const [imageUrl, setImageUrl] = useState('/placeholder-avatar.jpg');
+  const [roleText, setRoleText] = useState('');
+  const roles = [
+    'Girlfriend',
+    'Mommy',
+    'Crypto Buddie',
+    '(not so)Professional Trader',
+  ];
+  const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
 
   useEffect(() => {
-    getWaifuImage().then(url => {
+    getWaifuImage().then((url) => {
       if (url) setImageUrl(url);
     });
   }, []);
+
+  useEffect(() => {
+    let currentText = '';
+    let currentIndex = 0;
+    let isDeleting = false;
+    let timeout: NodeJS.Timeout;
+
+    const type = () => {
+      const currentRole = roles[currentRoleIndex];
+
+      if (isDeleting) {
+        currentText = currentRole.substring(0, currentIndex - 1);
+        currentIndex--;
+      } else {
+        currentText = currentRole.substring(0, currentIndex + 1);
+        currentIndex++;
+      }
+
+      setRoleText(currentText);
+
+      let typeSpeed = isDeleting ? 50 : 100;
+
+      if (!isDeleting && currentIndex === currentRole.length) {
+        // Pause at the end of typing
+        typeSpeed = 2000;
+        isDeleting = true;
+      } else if (isDeleting && currentIndex === 0) {
+        isDeleting = false;
+        setCurrentRoleIndex((prev) => (prev + 1) % roles.length);
+        typeSpeed = 500;
+      }
+
+      timeout = setTimeout(type, typeSpeed);
+    };
+
+    type();
+    return () => clearTimeout(timeout);
+  }, [currentRoleIndex]);
 
   return (
     <div className="flex items-center justify-center h-screen bg-gray-100 overflow-y-hidden">
@@ -54,12 +100,14 @@ export default function Home() {
               Say Hi to Cran!
             </AnimatedShinyText>
             <p className="text-neutral-600 text-lg mb-8">
-              She is here to be your AI Girlfriend.
+              She is here to be your AI{' '}
+              <span className="text-blue-500">{roleText}</span>
+              <span className="inline-block w-0.5 h-5 ml-1 bg-blue-500 items-center justify-center animate-blink"></span>
             </p>
             <Button
               size="lg"
               className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-              onClick={() => router.push('/chat')}
+              onClick={() => router.push('/login')}
             >
               <HyperText
                 className="text-lg font-bold text-white"

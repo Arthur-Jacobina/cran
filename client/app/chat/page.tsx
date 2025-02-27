@@ -11,20 +11,20 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { AudioRecorder } from '@/components/AudioRecorder';
-import { ImageIcon, SendIcon, TrashIcon } from 'lucide-react';
+import { SendIcon, TrashIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
 
 async function getWaifuImage() {
-    try {
-      const response = await fetch('/api/waifu');
-      const data = await response.json();
-      return data.imageUrl;
-    } catch (error) {
-      console.error('Error fetching image:', error);
-      return '/placeholder-avatar.jpg';
-    }
+  try {
+    const response = await fetch('/api/waifu');
+    const data = await response.json();
+    return data.imageUrl;
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    return '/placeholder-avatar.jpg';
   }
+}
 
 interface FlipCardProps {
   imageUrl: string;
@@ -79,7 +79,7 @@ const FlipCard = ({ imageUrl, alt, prompt }: FlipCardProps) => {
 
 interface Message {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
   audio?: string;
   createdAt: Date;
@@ -96,32 +96,54 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [audioData, setAudioData] = useState<number[]>(new Array(16).fill(128));
-  const audioRecorderRef = useRef<{ stopAndReset: () => void }>(null);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const audioRecorderRef = useRef<{
+    stopAndReset: () => void;
+    getAudioUrl: () => string | null;
+  }>(null);
 
   useEffect(() => {
-    getWaifuImage().then(url => {
+    getWaifuImage().then((url) => {
       if (url) setImageUrl(url);
     });
   }, []);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
-    // Only stop recording if there's actual audio data
+
+    let audioUrl = null;
+
+    // Get audio URL if recording
     if (isRecording && audioRecorderRef.current) {
+      audioUrl = audioRecorderRef.current.getAudioUrl();
       audioRecorderRef.current.stopAndReset();
       setIsRecording(false);
+    } else if (recordedAudioUrl) {
+      // Use previously recorded audio if available
+      audioUrl = recordedAudioUrl;
     }
+
+    // Create new message
     const newMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input,
+      content: input || (audioUrl ? '🎤 Audio message' : ''),
       createdAt: new Date(),
     };
+
+    // Add audio URL if available
+    if (audioUrl) {
+      newMessage.audio = audioUrl;
+    }
+
+    // Add message and reset states
     setMessages([...messages, newMessage]);
     setInput('');
-    // TO DO ADD EXECUTE AI + LOADING STATE
+    setRecordedAudioUrl(null);
+    setAudioData(new Array(16).fill(128));
     setIsTyping(false);
+
+    // TO DO ADD EXECUTE AI + LOADING STATE
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,32 +160,46 @@ export default function Chat() {
 
   const handleStopRecording = () => {
     if (audioRecorderRef.current) {
+      // Get the audio URL before stopping
+      const audioUrl = audioRecorderRef.current.getAudioUrl();
+      if (audioUrl) {
+        setRecordedAudioUrl(audioUrl);
+      }
+
       audioRecorderRef.current.stopAndReset();
     }
     setIsRecording(false);
-    // Reset audio data when stopping
+    setInput('');
     setAudioData(new Array(16).fill(128));
   };
 
+  const handleAudioReady = (url: string) => {
+    setRecordedAudioUrl(url);
+  };
+
   const gf_name = 'Cranberry';
-  const gf_description = 'A cute and friendly AI girlfriend, who is a bit of a nerd and loves to talk about anime and manga.';
+  const gf_description =
+    'A cute and friendly AI girlfriend, who is a bit of a nerd and loves to talk about anime and manga.';
 
   const galleryCards = [
     {
       imageUrl: imageUrl,
-      alt: "Gallery 1",
-      prompt: "A stunning digital artwork of an anime-style character with vibrant cranberry-colored hair, wearing casual tech company attire, sitting in a modern office environment surrounded by multiple computer screens displaying code."
+      alt: 'Gallery 1',
+      prompt:
+        'A stunning digital artwork of an anime-style character with vibrant cranberry-colored hair, wearing casual tech company attire, sitting in a modern office environment surrounded by multiple computer screens displaying code.',
     },
     {
       imageUrl: imageUrl,
-      alt: "Gallery 2",
-      prompt: "An illustration of a cheerful anime girl in a cozy room, surrounded by manga volumes and programming books, with a soft evening light streaming through the window."
+      alt: 'Gallery 2',
+      prompt:
+        'An illustration of a cheerful anime girl in a cozy room, surrounded by manga volumes and programming books, with a soft evening light streaming through the window.',
     },
     {
       imageUrl: imageUrl,
-      alt: "Gallery 3",
-      prompt: "A detailed portrait of an anime-style software engineer with distinctive cranberry hair, wearing smart casual clothes, holding a coffee mug with coding stickers, against a background of cherry blossoms."
-    }
+      alt: 'Gallery 3',
+      prompt:
+        'A detailed portrait of an anime-style software engineer with distinctive cranberry hair, wearing smart casual clothes, holding a coffee mug with coding stickers, against a background of cherry blossoms.',
+    },
   ];
 
   return (
@@ -172,7 +208,7 @@ export default function Chat() {
         <div className="flex flex-col lg:flex-row gap-4 justify-center items-start">
           <Card className="w-full max-w-2xl">
             <CardHeader className="flex flex-row items-center gap-4">
-              <div 
+              <div
                 className="w-12 h-12 rounded-full overflow-hidden cursor-pointer"
                 onClick={() => setIsOverlayOpen(true)}
               >
@@ -187,7 +223,7 @@ export default function Chat() {
 
             <AnimatePresence>
               {isOverlayOpen && (
-                <motion.div 
+                <motion.div
                   className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center"
                   onClick={() => setIsOverlayOpen(false)}
                   initial={{ opacity: 0 }}
@@ -195,7 +231,7 @@ export default function Chat() {
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <motion.div 
+                  <motion.div
                     className="relative max-w-xl w-full m-4 bg-white rounded-lg shadow-2xl overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                     initial={{ scale: 0.9, opacity: 0 }}
@@ -206,7 +242,7 @@ export default function Chat() {
                     <img
                       src={imageUrl}
                       alt={`${gf_name}'s avatar`}
-                      className="w-full h-auto object-contain rounded-lg"
+                      className="w-full h-full object-contain rounded-lg"
                     />
                   </motion.div>
                 </motion.div>
@@ -215,19 +251,19 @@ export default function Chat() {
 
             <CardContent className="h-[60vh] overflow-y-auto space-y-3 flex flex-col">
               {messages.map((message, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div 
+                  <div
                     className={`max-w-[60%] p-3 ${
-                      message.role === 'user' 
-                        ? 'bg-blue-400 text-white rounded-tl-xl rounded-tr-xl rounded-bl-xl' 
+                      message.role === 'user'
+                        ? 'bg-blue-400 text-white rounded-tl-xl rounded-tr-xl rounded-bl-xl'
                         : 'bg-gray-200 rounded-tr-xl rounded-tl-xl rounded-br-xl'
                     }`}
                   >
                     {message.content}
-                    
+
                     {message.audio && (
                       <audio controls className="mt-2 max-w-full">
                         <source src={message.audio} type="audio/webm" />
@@ -247,7 +283,7 @@ export default function Chat() {
                   onChange={handleFileUpload}
                   accept="image/*"
                 />
-                
+
                 {!isRecording ? (
                   <Input
                     value={input}
@@ -271,7 +307,7 @@ export default function Chat() {
                       transition={{ duration: 0.15 }}
                     >
                       <AnimatePresence mode="wait">
-                        {isTyping ? (
+                        {isTyping || recordedAudioUrl ? (
                           <motion.div
                             key="send-button"
                             initial={{ opacity: 0, scale: 0.8, width: 0 }}
@@ -279,12 +315,15 @@ export default function Chat() {
                             exit={{ opacity: 0, scale: 0.8, width: 0 }}
                             transition={{ duration: 0.15 }}
                           >
-                            <Button type="submit" className="bg-blue-500 text-white hover:bg-blue-600">
+                            <Button
+                              type="submit"
+                              className="bg-blue-500 text-white hover:bg-blue-600"
+                            >
                               <SendIcon className="w-4 h-4" />
                             </Button>
                           </motion.div>
                         ) : (
-                          <motion.div 
+                          <motion.div
                             key="inactive-buttons"
                             className="flex gap-2"
                             initial={{ opacity: 0, scale: 0.8 }}
@@ -292,16 +331,10 @@ export default function Chat() {
                             exit={{ opacity: 0, scale: 0.8 }}
                             transition={{ duration: 0.15 }}
                           >
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => fileInputRef.current?.click()}
-                            >
-                              <ImageIcon className="w-4 h-4 text-blue-500" />
-                            </Button>
-                            <AudioRecorder 
-                              onRecordingChange={setIsRecording} 
+                            <AudioRecorder
+                              onRecordingChange={setIsRecording}
                               onAudioData={setAudioData}
+                              onAudioReady={handleAudioReady}
                               ref={audioRecorderRef}
                             />
                           </motion.div>
@@ -317,16 +350,16 @@ export default function Chat() {
                       exit={{ opacity: 0, scale: 0.8 }}
                       transition={{ duration: 0.15 }}
                     >
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         variant="outline"
                         onClick={handleStopRecording}
                         className="bg-white text-red-500 hover:bg-gray-100"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </Button>
-                      <Button 
-                        type="submit" 
+                      <Button
+                        type="submit"
                         className="bg-blue-500 text-white hover:bg-blue-600"
                       >
                         <SendIcon className="w-4 h-4" />
@@ -337,7 +370,7 @@ export default function Chat() {
               </form>
             </CardFooter>
           </Card>
-          
+
           <div className="flex flex-col gap-4 w-full max-w-md">
             <Card className="w-full">
               <CardHeader>
@@ -373,21 +406,21 @@ export default function Chat() {
                     <h2 className="text-sm font-semibold mb-2">Memory Log</h2>
                     <div className="text-xs text-gray-600 max-h-24 overflow-y-auto">
                       <pre className="whitespace-pre-wrap">
-                        Last conversation: Discussed anime recommendations
-                        Core memory: Loves Sousou no Frieren
-                        Recent context: Technical discussion about React
+                        Last conversation: Discussed anime recommendations Core
+                        memory: Loves Sousou no Frieren Recent context:
+                        Technical discussion about React
                       </pre>
                     </div>
                   </div>
-                  
+
                   <div className="bg-gray-50 p-3 rounded-lg">
-                    <h2 className="text-sm font-semibold mb-2">Execution Flow</h2>
+                    <h2 className="text-sm font-semibold mb-2">
+                      Execution Flow
+                    </h2>
                     <div className="text-xs text-gray-600 max-h-24 overflow-y-auto">
                       <pre className="whitespace-pre-wrap">
-                        → Processing user input
-                        → Accessing memory context
-                        → Generating response
-                        → Updating conversation history
+                        → Processing user input → Accessing memory context →
+                        Generating response → Updating conversation history
                       </pre>
                     </div>
                   </div>

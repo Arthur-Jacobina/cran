@@ -7,24 +7,22 @@ export default function Header() {
       <div className="container mx-auto px-1 py-1 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/">
-          <AnimatedShinyText className="text-2xl inline-flex font-bold items-center justify-center px-2 py-1 transition ease-out hover:text-blue-600 hover:duration-300 hover:dark:text-blue-400">
-           
+            <AnimatedShinyText className="text-2xl inline-flex font-bold items-center justify-center px-2 py-1 transition ease-out hover:text-blue-600 hover:duration-300 hover:dark:text-blue-400">
               <span>Cranberry</span>
-
             </AnimatedShinyText>
           </Link>
         </div>
 
         <nav className="flex items-center gap-6">
-          <Link 
-            href="https://x.com/Arthur1Jacobina" 
+          <Link
+            href="https://x.com/Arthur1Jacobina"
             target="_blank"
             className="text-neutral-400 hover:text-blue-400 transition-colors"
           >
             <Twitter size={20} />
           </Link>
-          <Link 
-            href="https://github.com/Arthur-Jacobina/cran" 
+          <Link
+            href="https://github.com/Arthur-Jacobina/cran"
             target="_blank"
             className="text-neutral-400 hover:text-blue-400 transition-colors"
           >
