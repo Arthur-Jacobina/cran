@@ -10,10 +10,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ImageIcon, MicIcon, SendIcon } from 'lucide-react';
-import fs from 'fs';
-import OpenAI from 'openai';
 import { AudioRecorder } from '@/components/AudioRecorder';
+import { ImageIcon, MicIcon, SendIcon } from 'lucide-react';
 
 export default function Chat() {
   const [isTyping, setIsTyping] = useState(false);
