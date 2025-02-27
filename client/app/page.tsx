@@ -1,32 +1,29 @@
-'use client'
+'use client';
 
-import { useChat } from '@ai-sdk/react';
 import { useState, useRef } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { handleRecording } from '@/components/audio';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { ImageIcon, MicIcon, SendIcon } from 'lucide-react';
-import fs from "fs";
-import OpenAI from "openai";
+import fs from 'fs';
+import OpenAI from 'openai';
+import { AudioRecorder } from '@/components/AudioRecorder';
 
 export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit } = useChat();
   const [isTyping, setIsTyping] = useState(false);
   const [files, setFiles] = useState<FileList | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
-
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsTyping(true);
-    handleSubmit(e, { experimental_attachments: files }).finally(() => {
-      setIsTyping(false);
-      setFiles(undefined);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (audioInputRef.current) audioInputRef.current.value = '';
-    });
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,7 +39,7 @@ export default function Chat() {
           <CardTitle>AI Chat</CardTitle>
         </CardHeader>
         <CardContent className="h-[60vh] overflow-y-auto">
-          {messages.map(m => (
+          {/* {messages.map(m => (
             <div key={m.id} className={`mb-4 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
               <span className={`inline-block p-2 rounded-lg ${m.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
                 {m.content}
@@ -57,16 +54,16 @@ export default function Chat() {
                 </div>
               ))}
             </div>
-          ))}
+          ))} */}
         </CardContent>
         <CardFooter>
           <form onSubmit={onSubmit} className="flex w-full space-x-2">
-            <Input
+            {/* <Input
               value={input}
               onChange={handleInputChange}
               placeholder="Type your message..."
               className="flex-grow"
-            />
+            /> */}
             <input
               type="file"
               accept="image/*"
@@ -81,12 +78,14 @@ export default function Chat() {
               ref={audioInputRef}
               className="hidden"
             />
-            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+            >
               <ImageIcon className="w-4 h-4" />
             </Button>
-            <Button type="button" variant="outline" onClick={() => handleRecording()}>
-              <MicIcon className="w-4 h-4" />
-            </Button>
+            <AudioRecorder />
             <Button type="submit" disabled={isTyping}>
               <SendIcon className="w-4 h-4" />
             </Button>
