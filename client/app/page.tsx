@@ -1,95 +1,74 @@
 'use client';
 
-import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { AudioRecorder } from '@/components/AudioRecorder';
-import { ImageIcon, MicIcon, SendIcon } from 'lucide-react';
+import AnimatedShinyText from '@/components/ui/animated-shiny-text';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import HyperText from '@/components/ui/hyper-text';
+import { useRouter } from 'next/navigation';
 
-export default function Chat() {
-  const [isTyping, setIsTyping] = useState(false);
-  const [files, setFiles] = useState<FileList | undefined>(undefined);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
+async function getWaifuImage() {
+  try {
+    const response = await fetch('/api/waifu');
+    const data = await response.json();
+    return data.imageUrl;
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    return '/placeholder-avatar.jpg';
+  }
+}
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsTyping(true);
-  };
+export default function Home() {
+  const router = useRouter();
+  const [imageUrl, setImageUrl] = useState('/placeholder-avatar.jpg');
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFiles(event.target.files);
-    }
-  };
+  useEffect(() => {
+    getWaifuImage().then(url => {
+      if (url) setImageUrl(url);
+    });
+  }, []);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <CardTitle>AI Chat</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[60vh] overflow-y-auto">
-          {/* {messages.map(m => (
-            <div key={m.id} className={`mb-4 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
-              <span className={`inline-block p-2 rounded-lg ${m.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-black'}`}>
-                {m.content}
-              </span>
-              {m.experimental_attachments?.map((attachment, index) => (
-                <div key={index} className="mt-2">
-                  {attachment.contentType?.startsWith('image/') ? (
-                    <img src={attachment.url || "/placeholder.svg"} alt="Uploaded" className="max-w-xs rounded-lg" />
-                  ) : attachment.contentType?.startsWith('audio/') ? (
-                    <audio controls src={attachment.url} className="max-w-xs" />
-                  ) : null}
-                </div>
-              ))}
+    <div className="flex items-center justify-center h-screen bg-gray-100 overflow-y-hidden">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+          {/* Left column with image */}
+          <div className="w-full md:w-1/2">
+            <div className="relative aspect-square max-w-[500px] mx-auto">
+              <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse" />
+              <Image
+                src={imageUrl}
+                alt="Cran AI Avatar"
+                className="relative rounded-2xl shadow-xl object-cover w-full h-full"
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
+                fill
+                priority
+                unoptimized
+              />
             </div>
-          ))} */}
-        </CardContent>
-        <CardFooter>
-          <form onSubmit={onSubmit} className="flex w-full space-x-2">
-            {/* <Input
-              value={input}
-              onChange={handleInputChange}
-              placeholder="Type your message..."
-              className="flex-grow"
-            /> */}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileUpload}
-              ref={fileInputRef}
-              className="hidden"
-            />
-            <input
-              type="file"
-              accept="audio/*"
-              onChange={handleFileUpload}
-              ref={audioInputRef}
-              className="hidden"
-            />
+          </div>
+
+          {/* Right column with text and button */}
+          <div className="w-full md:w-1/2 flex flex-col text-center items-center md:text-left">
+            <AnimatedShinyText className="text-4xl md:text-5xl font-bold mb-6">
+              Say Hi to Cran!
+            </AnimatedShinyText>
+            <p className="text-neutral-600 text-lg mb-8">
+              She is here to be your AI Girlfriend.
+            </p>
             <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
+              size="lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              onClick={() => router.push('/chat')}
             >
-              <ImageIcon className="w-4 h-4" />
+              <HyperText
+                className="text-lg font-bold text-white"
+                text="Get Started"
+              />
             </Button>
-            <AudioRecorder />
-            <Button type="submit" disabled={isTyping}>
-              <SendIcon className="w-4 h-4" />
-            </Button>
-          </form>
-        </CardFooter>
-      </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
