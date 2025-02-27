@@ -14,6 +14,13 @@ import { AudioRecorder } from '@/components/AudioRecorder';
 import { SendIcon, TrashIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
+import dynamic from 'next/dynamic';
+
+// Import HeartParticles with SSR disabled
+const HeartParticles = dynamic(
+  () => import('@/components/ui/heart-particles'),
+  { ssr: false }
+);
 
 async function getWaifuImage() {
   try {
@@ -203,8 +210,9 @@ export default function Chat() {
   ];
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="container px-4 mx-auto">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 relative">
+      <HeartParticles />
+      <div className="container z-10 px-4 mx-auto">
         <div className="flex flex-col lg:flex-row gap-4 justify-center items-start">
           <Card className="w-full max-w-2xl">
             <CardHeader className="flex flex-row items-center gap-4">
