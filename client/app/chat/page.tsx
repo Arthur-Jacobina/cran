@@ -77,6 +77,14 @@ const FlipCard = ({ imageUrl, alt, prompt }: FlipCardProps) => {
   );
 };
 
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  audio?: string;
+  createdAt: Date;
+}
+
 export default function Chat() {
   const [isTyping, setIsTyping] = useState(false);
   const [files, setFiles] = useState<FileList | undefined>(undefined);
@@ -85,6 +93,7 @@ export default function Chat() {
   const [imageUrl, setImageUrl] = useState('/placeholder-avatar.jpg');
   const [isOverlayOpen, setIsOverlayOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [audioData, setAudioData] = useState<number[]>(new Array(16).fill(128));
   const audioRecorderRef = useRef<{ stopAndReset: () => void }>(null);
@@ -98,12 +107,20 @@ export default function Chat() {
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // If recording is active, stop it
+    // Only stop recording if there's actual audio data
     if (isRecording && audioRecorderRef.current) {
       audioRecorderRef.current.stopAndReset();
       setIsRecording(false);
     }
-    
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input,
+      createdAt: new Date(),
+    };
+    setMessages([...messages, newMessage]);
+    setInput('');
+    // TO DO ADD EXECUTE AI + LOADING STATE
     setIsTyping(false);
   };
 
@@ -124,9 +141,10 @@ export default function Chat() {
       audioRecorderRef.current.stopAndReset();
     }
     setIsRecording(false);
+    // Reset audio data when stopping
+    setAudioData(new Array(16).fill(128));
   };
 
-  console.log(files);
   const gf_name = 'Cranberry';
   const gf_description = 'A cute and friendly AI girlfriend, who is a bit of a nerd and loves to talk about anime and manga.';
 
@@ -195,8 +213,30 @@ export default function Chat() {
               )}
             </AnimatePresence>
 
-            <CardContent className="h-[60vh] overflow-y-auto">
-              {/* Chat messages would go here */}
+            <CardContent className="h-[60vh] overflow-y-auto space-y-3 flex flex-col">
+              {messages.map((message, index) => (
+                <div 
+                  key={index} 
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div 
+                    className={`max-w-[60%] p-3 ${
+                      message.role === 'user' 
+                        ? 'bg-blue-400 text-white rounded-tl-xl rounded-tr-xl rounded-bl-xl' 
+                        : 'bg-gray-200 rounded-tr-xl rounded-tl-xl rounded-br-xl'
+                    }`}
+                  >
+                    {message.content}
+                    
+                    {message.audio && (
+                      <audio controls className="mt-2 max-w-full">
+                        <source src={message.audio} type="audio/webm" />
+                        Your browser does not support the audio element.
+                      </audio>
+                    )}
+                  </div>
+                </div>
+              ))}
             </CardContent>
             <CardFooter>
               <form onSubmit={onSubmit} className="flex w-full space-x-2">

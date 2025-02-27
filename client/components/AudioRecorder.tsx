@@ -171,7 +171,7 @@ export const AudioRecorder = forwardRef<{ stopAndReset: () => void }, AudioRecor
       }
     };
 
-    const { isRecording, toggleRecording: originalToggleRecording } = useAudioRecorder(handleUpload);
+    const { isRecording, toggleRecording: hookToggleRecording } = useAudioRecorder(handleUpload);
 
     // Effect to manage recording state changes
     useEffect(() => {
@@ -184,13 +184,13 @@ export const AudioRecorder = forwardRef<{ stopAndReset: () => void }, AudioRecor
     }, [isRecording]);
 
     const toggleRecording = () => {
-      originalToggleRecording();
+      hookToggleRecording();
     };
 
     // Function to stop recording and reset state
     const stopAndReset = () => {
       if (isRecording) {
-        originalToggleRecording(); // Stop the recording via the hook
+        hookToggleRecording(); // Stop the recording via the hook
         cleanupAudio();
       }
     };
