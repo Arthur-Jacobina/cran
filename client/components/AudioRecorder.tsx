@@ -10,7 +10,7 @@ export const AudioRecorder = () => {
     formData.append('file', audioBlob, 'recording.mp3');
 
     try {
-      const response = await fetch('/api/upload', {
+      const response = await fetch('/api/upload-audio', {
         method: 'POST',
         body: formData,
       });

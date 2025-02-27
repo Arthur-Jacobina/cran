@@ -1,10 +1,17 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
+import tenseal as ts
+from sqlalchemy.orm import Session
+from .database import SessionLocal, engine
+from .models import Base, User, Room, Message, Agent
 from typing import Dict, Optional
 from .storage_entities import StorageEntity
 from encryption.encrypted_vector_store import EncryptedVectorStore, Entry
 from encryption.upsert import UpsertPipeline
-import tenseal as ts
+import uuid
+import uvicorn
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Cranberry Storage", root_path="/api/v1/")
 
@@ -168,3 +175,47 @@ async def health_check():
         store_count: int
     '''
     return {"status": "healthy", "store_count": len(storage)}
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.post("/users")
+def create_user(username: str, db: Session = Depends(get_db)):
+    user = User(id=uuid.uuid4(), username=username, agent_ids=[], room_ids=[])
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@app.post("/rooms")
+def create_room(user_id: uuid.UUID, agent_id: uuid.UUID, db: Session = Depends(get_db)):
+    room = Room(id=uuid.uuid4(), user_id=user_id, agent_id=agent_id)
+    db.add(room)
+    db.commit()
+    db.refresh(room)
+    return room
+
+@app.get("/rooms")
+def get_rooms(db: Session = Depends(get_db)):
+    return db.query(Room).all()
+
+@app.post("/messages")
+def create_message(room_id: uuid.UUID, role: str, db: Session = Depends(get_db)):
+    message = Message(id=uuid.uuid4(), room_id=room_id, role=role, status=True)
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
+
+# Get messages in a room
+@app.get("/rooms/{room_id}/messages")
+def get_room_messages(room_id: uuid.UUID, db: Session = Depends(get_db)):
+    return db.query(Message).filter(Message.room_id == room_id).all()
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=5000, reload=True)
