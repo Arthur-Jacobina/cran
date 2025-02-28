@@ -3,3 +3,10 @@ sentence_transformers
 fastapi
 uvicorn
 pydantic
+sqlalchemy
+psycopg2-binary
+python-dotenv
+alembic
+uuid
+typing-extensions
+sqlalchemy-json
