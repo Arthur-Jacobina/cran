@@ -6,6 +6,10 @@ import AnimatedShinyText from '@/components/ui/animated-shiny-text';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { useAccount } from 'wagmi';
+import { signIn, useSession } from 'next-auth/react';
+import { SiweMessage } from 'siwe';
+import { useSignMessage } from 'wagmi';
 
 // Import HeartParticles with SSR disabled
 const HeartParticles = dynamic(
@@ -15,6 +19,9 @@ const HeartParticles = dynamic(
 
 export default function Login() {
   const router = useRouter();
+  const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
+  const { data: session } = useSession();
   const [waifuImage, setWaifuImage] = useState<string>(
     './placeholder-avatar.jpg',
   );
@@ -36,6 +43,49 @@ export default function Login() {
     });
   }, []);
 
+  useEffect(() => {
+    if (session?.address) {
+      router.push('/chat');
+    }
+  }, [session, router]);
+
+  const handleAuth = async () => {
+    try {
+      // Get nonce as plain text
+      const nonceRes = await fetch('/api/auth/nonce');
+      if (!nonceRes.ok) throw new Error('Failed to get nonce');
+      const nonce = await nonceRes.text();
+
+      const message = new SiweMessage({
+        domain: window.location.host,
+        address: address,
+        statement: "Sign in with Ethereum to Cranberry",
+        uri: window.location.origin,
+        version: '1',
+        chainId: 1,
+        nonce: nonce
+      });
+
+      const signature = await signMessageAsync({
+        message: message.prepareMessage(),
+      });
+
+      const response = await signIn('credentials', {
+        message: JSON.stringify(message),
+        signature,
+        redirect: false,
+      });
+
+      if (response?.error) {
+        console.error('Error signing in:', response.error);
+      } else {
+        router.push('/chat');
+      }
+    } catch (error) {
+      console.error('Error during authentication:', error);
+    }
+  };
+
   return (
     <div className="flex h-screen">
       {/* Left column - Login content */}
@@ -47,10 +97,20 @@ export default function Login() {
               Welcome to Cranberry
             </AnimatedShinyText>
             <p className="text-gray-600 mb-6 text-center">
-              Connect your wallet to get started
+              Connect your wallet to start chatting with Cran!
             </p>
             <div className="flex flex-col items-center gap-6">
-              <ConnectButton />
+                {!isConnected && (
+                    <ConnectButton />
+                )}
+              {isConnected && (
+                <button
+                  onClick={handleAuth}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Sign In with Ethereum
+                </button>
+              )}
             </div>
           </div>
         </div>

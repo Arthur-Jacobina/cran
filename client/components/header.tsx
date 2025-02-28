@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import { Github, Twitter } from 'lucide-react';
 import AnimatedShinyText from '@/components/ui/animated-shiny-text';
+import { useSession } from 'next-auth/react';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+
 export default function Header() {
+  const { data: session } = useSession();
+
   return (
     <header className="w-full border-neutral-800 bg-white/50 backdrop-blur-xl sticky top-0 z-50">
       <div className="container mx-auto px-1 py-1 flex items-center justify-between">
@@ -14,6 +19,14 @@ export default function Header() {
         </div>
 
         <nav className="flex items-center gap-6">
+          <ConnectButton 
+            chainStatus="none"
+            showBalance={false}
+            accountStatus={{
+              smallScreen: 'avatar',
+              largeScreen: 'full',
+            }}
+          />
           <Link
             href="https://x.com/Arthur1Jacobina"
             target="_blank"
