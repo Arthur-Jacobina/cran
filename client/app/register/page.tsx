@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import HyperText from '@/components/ui/hyper-text'
-
+import { useAccount } from 'wagmi'
 interface FormData {
+  wallet_address: string
   name: string
   twitter: string
   preferences: {
@@ -15,13 +16,17 @@ interface FormData {
     techSavvy: boolean
     romantic: boolean
     animeVibes: boolean
+    rosie: boolean
+    cranberry: boolean
   }
   selectedWaifus: string[]
 }
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1)
+  const [walletAddress, setWalletAddress] = useState('')
   const [formData, setFormData] = useState<FormData>({
+    wallet_address: '',
     name: '',
     twitter: '',
     preferences: {
@@ -32,21 +37,18 @@ export default function RegisterPage() {
       techSavvy: false,
       romantic: false,
       animeVibes: false,
+      rosie: false,
+      cranberry: false,
     },
     selectedWaifus: [],
   })
   const [waifuImages, setWaifuImages] = useState<string[]>([])
-
-  async function getWaifuImage() {
-    try {
-      const response = await fetch('/api/waifu');
-      const data = await response.json();
-      return data.imageUrl;
-    } catch (error) {
-      console.error('Error fetching image:', error);
-      return '/placeholder-avatar.jpg';
+  const { address } = useAccount()
+  useEffect(() => {
+    if (address) {
+      setFormData(prev => ({ ...prev, wallet_address: address }))
     }
-  }
+  }, [address])
 
   useEffect(() => {
     const fetchWaifus = async () => {
@@ -85,10 +87,49 @@ export default function RegisterPage() {
     }))
   }
 
-  const handleFinalSubmit = (e: React.FormEvent) => {
+  const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.selectedWaifus.length >= 3) {
-      console.log('Form submitted:', formData)
+    if (formData.selectedWaifus.length >= 0) {
+      try {
+        // Format the data to match backend expectations
+        const requestData = {
+          wallet_address: formData.wallet_address,
+          username: formData.name,
+          twitter_handle: formData.twitter.replace('@', ''), // Remove @ if present
+          preferences: {
+            looks: formData.preferences.looks || false,
+            personality: formData.preferences.personality || false,
+            just_girl: formData.preferences.justGirl || false,
+            neutral: formData.preferences.neutral || false,
+            tech_savvy: formData.preferences.techSavvy || false,
+            romantic: formData.preferences.romantic || false,
+            anime_vibes: formData.preferences.animeVibes || false,
+            rosie: formData.preferences.rosie || false,
+            cranberry: formData.preferences.cranberry || false
+          },
+          selected_waifus: formData.selectedWaifus.length > 0 ? formData.selectedWaifus : ["rosie", "cranberry"],
+        }
+        console.log(requestData)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+        })
+  
+        if (!response.ok) {
+          const errorData = await response.json()
+          console.error('Error response:', errorData)
+          throw new Error(errorData.detail || 'Failed to create user')
+        }
+  
+        const data = await response.json()
+        console.log('User created successfully:', data)
+        window.location.href = '/chat'
+      } catch (error) {
+        console.error('Error creating user:', error)
+      }
     }
   }
 
@@ -232,7 +273,7 @@ export default function RegisterPage() {
             <HyperText className="text-2xl font-bold text-blue-500" text="Choose Your Favorite Waifus" />
             <button
               type="submit"
-              disabled={formData.selectedWaifus.length < 3}
+              disabled={formData.selectedWaifus.length < 0}
               className="border-2 border-blue-500 text-white px-3 py-1 rounded-full bg-blue-500 text-sm hover:bg-blue-600 disabled:border-gray-400 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-transparent"
             >
               Submit

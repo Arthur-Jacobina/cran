@@ -2,9 +2,13 @@ from sqlalchemy.orm import Session
 from ..tables.user import User
 from typing import Optional, List, Dict, Any
 
-def create_user(db: Session, wallet_address: str, username: str) -> User:
+def create_user(db: Session, user_data: Dict[str, Any]) -> User:
     """Create a new user"""
-    db_user = User(wallet_address=wallet_address, username=username)
+    # Filter out any non-model attributes
+    valid_fields = User.__table__.columns.keys()
+    cleaned_data = {k: v for k, v in user_data.items() if k in valid_fields}
+    
+    db_user = User(**cleaned_data)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -18,6 +22,10 @@ def get_user_by_username(db: Session, username: str) -> Optional[User]:
     """Get a user by username"""
     return db.query(User).filter(User.username == username).first()
 
+def get_user_by_twitter(db: Session, twitter_handle: str) -> Optional[User]:
+    """Get a user by twitter handle"""
+    return db.query(User).filter(User.twitter_handle == twitter_handle).first()
+
 def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
     """Get all users with pagination"""
     return db.query(User).offset(skip).limit(limit).all()
@@ -26,9 +34,12 @@ def update_user(db: Session, wallet_address: str, user_data: Dict[str, Any]) -> 
     """Update a user"""
     db_user = get_user(db, wallet_address)
     if db_user:
-        for key, value in user_data.items():
-            if hasattr(db_user, key):  # Only update existing attributes
-                setattr(db_user, key, value)
+        # Filter out any non-model attributes
+        valid_fields = User.__table__.columns.keys()
+        cleaned_data = {k: v for k, v in user_data.items() if k in valid_fields}
+        
+        for key, value in cleaned_data.items():
+            setattr(db_user, key, value)
         db.commit()
         db.refresh(db_user)
     return db_user

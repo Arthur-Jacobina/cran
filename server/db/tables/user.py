@@ -1,16 +1,24 @@
-from sqlalchemy import Column, String
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy.orm import relationship  # Add this import
-from .base import Base  # Import the base class
+from sqlalchemy import Column, String, JSON, ARRAY, DateTime
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+import uuid
+from datetime import datetime, timezone
+from .base import Base
 
 class User(Base):
     __tablename__ = "users"
 
-    wallet_address = Column(String, primary_key=True, index=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    wallet_address = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
-    room_ids = Column(ARRAY(UUID(as_uuid=True)), nullable=True)  # Array of UUIDs
+    twitter_handle = Column(String, unique=True, index=True, nullable=False)
+    preferences = Column(JSON, nullable=False)
+    selected_waifus = Column(ARRAY(String), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
+    # Relationship
     rooms = relationship("Room", back_populates="user", cascade="all, delete")
 
     def __repr__(self):
-        return f"<User(wallet_address={self.wallet_address}, username={self.username})>"
+        return f"<User(id={self.id}, wallet_address={self.wallet_address})>"

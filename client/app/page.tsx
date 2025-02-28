@@ -21,6 +21,7 @@ async function getWaifuImage() {
 export default function Home() {
   const router = useRouter();
   const [imageUrl, setImageUrl] = useState('/placeholder-avatar.jpg');
+  const [isLoading, setIsLoading] = useState(true);
   const [roleText, setRoleText] = useState('');
   const roles = [
     'Girlfriend',
@@ -32,7 +33,10 @@ export default function Home() {
 
   useEffect(() => {
     getWaifuImage().then((url) => {
-      if (url) setImageUrl(url);
+      if (url) {
+        setImageUrl(url);
+        setIsLoading(false);
+      }
     });
   }, []);
 
@@ -80,17 +84,22 @@ export default function Home() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-12">
           {/* Left column with image */}
           <div className="w-full md:w-1/2">
-            <div className="relative aspect-square max-w-[500px] mx-auto">
-              <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse" />
-              <Image
-                src={imageUrl}
-                alt="Cran AI Avatar"
-                className="relative rounded-2xl shadow-xl object-cover w-full h-full"
-                style={{ objectFit: 'cover', objectPosition: 'center' }}
-                fill
-                priority
-                unoptimized
-              />
+            <div className="relative max-w-[500px] mx-auto">
+              <div className="relative w-full pt-[150%] rounded-2xl">
+                <div className="absolute inset-0 rounded-2xl bg-blue-500/20 blur-xl animate-pulse" />
+                {isLoading ? (
+                  <div className="absolute inset-0 rounded-2xl bg-gray-200 animate-pulse" />
+                ) : (
+                  <Image
+                    src={imageUrl}
+                    alt="Cran AI Avatar"
+                    className="absolute inset-0 rounded-2xl shadow-xl object-cover w-full h-[80%]"
+                    fill
+                    priority
+                    unoptimized
+                  />
+                )}
+              </div>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, JSON
+from datetime import datetime
+from sqlalchemy import Column, String, JSON, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from .base import Base
@@ -9,13 +10,15 @@ class Agent(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String, nullable=False)
-    personality = Column(JSON, nullable=False)
-    description = Column(String, nullable=False)
-    image = Column(String, nullable=False)
-    voicepreset = Column(String)
+    description = Column(String)
+    model = Column(String, nullable=False)
+    parameters = Column(JSON)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Add relationship to rooms
-    rooms = relationship("Room", backref="agent")
+    # Relationships
+    rooms = relationship("Room", back_populates="agent")
 
     def __repr__(self):
         return f"<Agent(id={self.id}, name={self.name})>"

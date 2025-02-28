@@ -1,20 +1,34 @@
-from pydantic import BaseModel, UUID4, EmailStr
-from typing import Optional
+from pydantic import BaseModel, UUID4
+from typing import Optional, List
 from datetime import datetime
 
+class UserPreferences(BaseModel):
+    looks: bool
+    personality: bool
+    justGirl: bool
+    neutral: bool
+    techSavvy: bool
+    romantic: bool
+    animeVibes: bool
+    rosie: bool
+    cranberry: bool
+
 class UserBase(BaseModel):
+    wallet_address: str
     username: str
-    email: EmailStr
-    full_name: Optional[str] = None
-    is_active: bool = True
+    twitter_handle: str
+    preferences: UserPreferences
+    selected_waifus: List[str]
 
 class UserCreate(UserBase):
-    password: str
+    wallet_address: str
+    username: str
+    twitter_handle: str
+    preferences: UserPreferences
+    selected_waifus: List[str]
 
-class UserUpdate(BaseModel):
+class UserUpdate(UserBase):
     username: Optional[str] = None
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = None
     password: Optional[str] = None
     is_active: Optional[bool] = None
 
