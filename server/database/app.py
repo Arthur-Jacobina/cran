@@ -16,7 +16,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Cranberry Storage", root_path="/api/v1/")
 
 storage = StorageEntity()
-
+    
 class VectorStoreInput(BaseModel):
     context: ts.Context
 
