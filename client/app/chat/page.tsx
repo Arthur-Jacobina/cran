@@ -94,7 +94,6 @@ interface Message {
 
 export default function Chat() {
   const [isTyping, setIsTyping] = useState(false);
-  const [files, setFiles] = useState<FileList | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const [imageUrl, setImageUrl] = useState('/placeholder-avatar.jpg');
@@ -104,6 +103,9 @@ export default function Chat() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioData, setAudioData] = useState<number[]>(new Array(16).fill(128));
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [privateMode, setPrivateMode] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [nsfwMode, setNsfwMode] = useState(false);
   const audioRecorderRef = useRef<{
     stopAndReset: () => void;
     getAudioUrl: () => string | null;
@@ -151,12 +153,6 @@ export default function Chat() {
     setIsTyping(false);
 
     // TO DO ADD EXECUTE AI + LOADING STATE
-  };
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFiles(event.target.files);
-    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -284,13 +280,6 @@ export default function Chat() {
             </CardContent>
             <CardFooter>
               <form onSubmit={onSubmit} className="flex w-full space-x-2">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handleFileUpload}
-                  accept="image/*"
-                />
 
                 {!isRecording ? (
                   <Input
@@ -431,6 +420,17 @@ export default function Chat() {
                         Generating response → Updating conversation history
                       </pre>
                     </div>
+                  </div>
+                  <div className="flex flex-row justify-center gap-2">
+                    <button className={`text-gray-500 rounded-full px-4 py-2 ${privateMode ? 'bg-blue-600 text-white' : 'border border-gray-300'}`} onClick={() => setPrivateMode(!privateMode)}>
+                      Private Mode
+                    </button>
+                    <button className={`text-gray-500 rounded-full px-4 py-2 ${voiceMode ? 'bg-blue-600 text-white' : 'border border-gray-300'}`} onClick={() => setVoiceMode(!voiceMode)}>
+                        Voice Mode
+                    </button>
+                    <button className={`text-gray-500 rounded-full px-4 py-2 ${nsfwMode ? 'bg-blue-600 text-white' : 'border border-gray-300'}`} onClick={() => setNsfwMode(!nsfwMode)}>
+                        +18
+                    </button>
                   </div>
                 </div>
               </CardContent>
