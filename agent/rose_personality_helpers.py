@@ -2,7 +2,7 @@ import json
 from memory.entry import Entry
 import random
 from datetime import datetime
-from langchain_openai import ChatOpenAI
+f"rom langchain_openai import ChatOpenAI"
 from langgraph.prebuilt import create_react_agent
 import os
 from memory.working_context import WorkingContext
