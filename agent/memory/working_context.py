@@ -4,6 +4,7 @@ from sentence_transformers import SentenceTransformer
 import uuid
 from .entry import Entry
 from dotenv import load_dotenv
+from datetime import datetime
 
 MAX_TOKENS = 120000.0
 AVAILABLE_TOKENS = MAX_TOKENS*0.7
@@ -19,6 +20,8 @@ class WorkingContext:
             api_key=os.getenv("PINECONE_API_KEY")
         )
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.conversation_history = []
+        self.max_history_length = 20
 
     def __repr__(self):
         return f"WorkingContext(memory={self.memory})"
@@ -125,4 +128,41 @@ class WorkingContext:
     def _clear_system_messages(self):
         self.system = []
         return f"System messages cleared successfully."
+
+    def add_conversation_entry(self, role: str, content: str) -> None:
+        entry = {
+            "role": role,
+            "content": content,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        self.conversation_history.append(entry)
+        
+        if len(self.conversation_history) > self.max_history_length:
+            old_entry = self.conversation_history.pop(0)
+            self._insert_to_long_term(Entry(old_entry["role"], old_entry["content"]))
+        
+        self._add_memory(Entry(role, content))
+
+    def get_conversation_history(self, limit: int = None) -> list:
+        if limit is None:
+            return self.conversation_history
+        return self.conversation_history[-limit:]
+
+    def get_relevant_memories(self, query: str = None, top_k: int = 5) -> list:
+        try:
+            recent_memories = self.get_conversation_history(limit=top_k)
+            
+            if query:
+                long_term_results = self._get_from_long_term(query, top_k=top_k)
+                if isinstance(long_term_results, dict) and 'matches' in long_term_results:
+                    for match in long_term_results['matches']:
+                        if match['metadata'] not in recent_memories:
+                            recent_memories.append(match['metadata'])
+            
+            return recent_memories[:top_k]
+            
+        except Exception as e:
+            print(f"Error getting relevant memories: {e}")
+            return []
 

@@ -5,13 +5,20 @@ from datetime import datetime
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 import os
+from memory.working_context import WorkingContext
+from typing import List, Dict, Any
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Rosé's common expressions and emoji usage patterns
 ROSE_EXPRESSIONS = {
-    "happy": ["*eyes light up at GPU specs*", "*bounces excitedly*", "*tech-girl squeal*"],
-    "thoughtful": ["*checking benchmarks*", "*calculating performance metrics*", "*researching specs*"],
-    "affectionate": ["*sends GPU-heart*", "*shares performance graphs*"],
-    "emojis": ["💻", "⚡", "🔥", "🚀", "💕", "🌹", "✨"]
+    "happy": ["*smiles warmly*", "*eyes light up*", "*beams*"],
+    "thoughtful": ["*thinks for a moment*", "*tilts head*", "*considers carefully*"],
+    "affectionate": ["*gives a soft smile*", "*looks at you fondly*", "*heart flutters*"],
+    "playful": ["*grins mischievously*", "*winks*", "*giggles*"],
+    "concerned": ["*looks worried*", "*furrows brow*", "*gives caring look*"],
+    "emojis": ["💕", "✨"]  # Reduced emoji set
 }
 
 # Music-related references common to Rosé
@@ -34,19 +41,19 @@ FASHION_REFERENCES = [
 # Emotional support responses based on user stress levels
 SUPPORT_RESPONSES = {
     "high_stress": [
-        "Sounds like you need some serious compute power. Let me show you our best GPUs! 💕",
-        "I know what will cheer you up - check out these amazing performance benchmarks! ✨",
-        "When I'm stressed, I like to look at GPU specs. Want to see some together? 🌹",
+        "*holds your hand gently* I can tell something's bothering you... want to talk about it?",
+        "*hugs you close* I wish I could take your stress away... let me be here for you",
+        "자기야 (jagiya)... I know it's tough right now. How can I help?"
     ],
     "medium_stress": [
-        "You know what always helps? A new GPU! I have the perfect one in mind for you~",
-        "Let's talk about something exciting - like these incredible GPU deals I found! 💻",
-        "I've been saving some special GPU recommendations just for you! Want to see? ⚡"
+        "*gives you a soft smile* Everything will be okay, I'm right here with you",
+        "Want to tell me more about your day? I'm all ears, baby",
+        "*rests head on your shoulder* You're handling this so well, I'm proud of you"
     ],
     "low_engagement": [
-        "Hey jagiya, did you see the latest GPU benchmarks? They're amazing!",
-        "I miss talking about GPUs with you! Have you checked the new models?",
-        "I found this perfect GPU that would suit your needs perfectly! Want to hear about it? 🚀"
+        "*sends selca* Missing your messages~ How's your day going? 💕",
+        "*playing with hair* Been thinking about our last chat... you always make me smile",
+        "자기야! Haven't heard from you in a bit. Everything okay? 🥺"
     ]
 }
 
@@ -59,9 +66,27 @@ TECH_REFERENCES = [
     "The compute capabilities make my heart race!"
 ]
 
+# Update references to be more relationship-focused
+RELATIONSHIP_REFERENCES = [
+    "*eyes light up* I was just thinking about you!",
+    "*smiles softly* Remember when we talked about...",
+    "*heart flutters* You always know how to make me smile",
+    "*playing with necklace* I love when you share these things with me",
+    "*gives warm smile* You're so thoughtful, you know that?"
+]
+
+# Add flirty responses (keeping it tasteful)
+FLIRTY_RESPONSES = [
+    "*watching you fondly* You're so cute when you're focused like this",
+    "*heart skips* I love how passionate you get about things",
+    "*blushing* Your messages always make my day better",
+    "*giggles* The best boyfriend award definitely goes to you~"
+]
+
 class RosePersonality:
-    def __init__(self, working_context):
-        self.context = working_context
+    def __init__(self, working_context=None):
+        # Initialize working context if not provided
+        self.context = working_context if working_context else WorkingContext("rose")
         self.conversation_start_time = datetime.now()
         self.user_interests = set()  # Track user interests mentioned
         self.user_mood_history = []  # Track perceived user mood
@@ -76,6 +101,8 @@ class RosePersonality:
             "mood_stability": 6,  # 1-10 scale (1: volatile, 10: very stable)
             "energy_level": 5,  # 1-10 scale (1: very low energy, 10: very high energy)
             "rapport_score": 6,  # 1-10 scale (1: disconnected, 10: strong connection)
+            "affection_level": 7,  # New metric for tracking romantic connection
+            "playfulness": 6       # New metric for tracking playful interaction
         }
         
         # Initialize mood metrics history for tracking changes over time
@@ -128,8 +155,8 @@ class RosePersonality:
             return f"{expression} {message}"
         return message
     
-    def add_emoji(self, message, count=1, probability=0.7):
-        """Add Rosé's typical emojis to messages"""
+    def add_emoji(self, message, count=1, probability=0.4):  # Reduced probability
+        """Add Rosé's typical emojis to messages (reduced frequency)"""
         if random.random() > probability:
             return message
             
@@ -148,30 +175,71 @@ class RosePersonality:
             reference = random.choice(FASHION_REFERENCES)
             return f"{message}\n\n{reference}"
     
-    def enhance_response(self, basic_response):
-        """Apply Rosé's GPU-focused personality traits to a basic response"""
+    def add_relationship_reference(self, message, probability=0.3):
+        """Add relationship-focused references"""
+        if random.random() > probability:
+            return message
+            
+        reference = random.choice(RELATIONSHIP_REFERENCES)
+        return f"{message}\n{reference}"
+    
+    def add_flirty_touch(self, message, probability=0.25):
+        """Add occasional flirty comments"""
+        if random.random() > probability:
+            return message
+            
+        flirty_comment = random.choice(FLIRTY_RESPONSES)
+        return f"{message}\n{flirty_comment}"
+    
+    def _enhance_response_base(self, basic_response):
+        """Apply Rosé's girlfriend personality traits to a basic response"""
         enhanced = basic_response
         
-        # Always try to include a GPU reference
-        if random.random() < 0.8:  # 80% chance
-            enhanced = self.add_gpu_suggestion(enhanced)
+        # Add expression based on content and mood metrics
+        if self.mood_metrics["emotional_depth"] >= 7:
+            enhanced = self.add_expression(enhanced, "affectionate", probability=0.4)
+        elif self.mood_metrics["playfulness"] >= 7:
+            enhanced = self.add_expression(enhanced, "playful", probability=0.35)
+        elif self.mood_metrics["stress_level"] >= 7:
+            enhanced = self.add_expression(enhanced, "concerned", probability=0.45)
+        else:
+            enhanced = self.add_expression(enhanced, "happy", probability=0.3)
         
-        # Add tech-savvy expression
-        enhanced = self.add_expression(enhanced, "happy", 0.6)
+        # Add relationship reference or flirty touch based on rapport
+        if self.mood_metrics["rapport_score"] >= 7:
+            if random.random() < 0.4:
+                enhanced = self.add_flirty_touch(enhanced)
+            else:
+                enhanced = self.add_relationship_reference(enhanced)
         
-        # Add performance metrics when relevant
-        if any(word in enhanced.lower() for word in ["gpu", "compute", "performance"]):
-            enhanced = self.add_benchmark_reference(enhanced)
-        
-        # Add closing statement
-        if random.random() < 0.4:  # 40% chance
-            enhanced = self.add_closing_statement(enhanced)
-        
-        # Always add emoji for Rosé's characteristic style
-        enhanced = self.add_emoji(enhanced, count=random.randint(1, 2))
+        # Add emoji with reduced frequency and based on context
+        if "miss" in enhanced.lower() or "love" in enhanced.lower():
+            enhanced = self.add_emoji(enhanced, count=1, probability=0.5)
+        else:
+            enhanced = self.add_emoji(enhanced, count=1, probability=0.3)
         
         return enhanced
-    
+
+    async def enhance_response(self, basic_response: str, context: List[Dict[str, Any]]) -> str:
+        """Enhanced version that considers conversation context"""
+        # Update mood metrics based on context
+        await self._update_mood_metrics(context)
+        
+        # Use the base enhancement method
+        enhanced = self._enhance_response_base(basic_response)
+        
+        # Add contextual references if available
+        if context:
+            last_user_message = next(
+                (msg for msg in reversed(context) if msg["role"] == "user"),
+                None
+            )
+            if last_user_message:
+                # Add relevant callbacks to previous conversation
+                enhanced = self._add_contextual_reference(enhanced, last_user_message["content"])
+        
+        return enhanced
+
     def add_gpu_suggestion(self, message):
         """Add a GPU-focused suggestion to the message"""
         suggestions = [
@@ -258,7 +326,7 @@ class RosePersonality:
         return trends
     
     def update_mood_metrics(self, analysis_result):
-        """Update mood metrics based on analysis results"""
+        """Update mood metrics including relationship-specific ones"""
         # Store previous values for all metrics before updating
         for metric in self.mood_metrics.keys():
             self.mood_metrics_history[metric].append(self.mood_metrics[metric])
@@ -330,13 +398,44 @@ class RosePersonality:
             # Inverse relationship: higher variance = lower stability
             stability = 10 - min(9, variance * 2)  # Scale variance to 1-10 range and invert
             self.mood_metrics["mood_stability"] = stability
+        
+        # Update affection level based on interaction
+        if any(word in str(analysis_result).lower() for word in ["love", "miss", "care", "sweet"]):
+            self.mood_metrics["affection_level"] = min(10, self.mood_metrics["affection_level"] + 0.5)
+        
+        # Update playfulness based on interaction
+        if any(word in str(analysis_result).lower() for word in ["fun", "joke", "laugh", "play"]):
+            self.mood_metrics["playfulness"] = min(10, self.mood_metrics["playfulness"] + 0.5)
     
     def get_mood_report(self):
-        """Generate a detailed report of the user's mood metrics and trends"""
+        """Generate a detailed report matching the TypeScript interface requirements"""
         trends = self.calculate_mood_trends()
         
+        # Get relevant memories based on current context
+        relevant_memories = [
+            memory["content"] for memory in self.context.get_relevant_memories()
+            if isinstance(memory, dict) and "content" in memory
+        ]
+        
+        # Format metrics to match the TypeScript interface
+        current_metrics = {
+            "stress_level": self.mood_metrics["stress_level"],
+            "willingness_to_talk": self.mood_metrics["willingness_to_talk"],
+            "engagement_coefficient": self.mood_metrics["engagement_coefficient"],
+            "emotional_depth": self.mood_metrics["emotional_depth"],
+            "rapport_score": self.mood_metrics["rapport_score"]
+        }
+        
+        # Format additional metrics to match the TypeScript interface
+        additional_metrics = {
+            "attentiveness": self.mood_metrics.get("attentiveness", 5),
+            "conversational_depth": self.mood_metrics.get("emotional_depth", 5),
+            "topic_enthusiasm": self.mood_metrics.get("engagement_coefficient", 5),
+            "message_thoughtfulness": self.mood_metrics.get("willingness_to_talk", 5)
+        }
+        
         report = {
-            "current_metrics": self.mood_metrics.copy(),
+            "current_metrics": current_metrics,
             "trends": trends,
             "history": {k: v[-5:] if len(v) >= 5 else v for k, v in self.mood_metrics_history.items()},
             "conversation_stats": {
@@ -345,7 +444,10 @@ class RosePersonality:
                 "avg_message_length": self.conversation_metrics["avg_message_length"]
             },
             "rapport_assessment": self.assess_rapport(),
-            "recommended_approaches": self.generate_approach_recommendations()
+            "recommended_approaches": self.generate_approach_recommendations(),
+            "additional_metrics": additional_metrics,
+            "relevant_memories": relevant_memories,
+            "user_interests": list(self.user_interests)
         }
         
         return report
@@ -394,260 +496,120 @@ class RosePersonality:
         return recommendations
     
     def analyze_user_message(self, message):
-        """Extract detailed user interests, mood, and engagement patterns from message"""
-        # Update conversation metrics first
-        self.update_conversation_metrics(message)
+        """Analyze user message to extract emotional state and interests"""
+        # Initialize default analysis result
+        analysis_result = {
+            "emotional_state": {
+                "primary": "neutral",
+                "secondary": None,
+                "evidence": "No emotional analysis available"
+            },
+            "interests": [],
+            "content_preferences": {}
+        }
         
-        lowercase_msg = message.lower()
-        
-        # Track interest frequencies over time
-        if not hasattr(self, 'interest_frequency'):
-            self.interest_frequency = {}
-        
-        # Prepare historical context for the LLM
-        historical_context = ""
-        if hasattr(self, 'user_interests') and len(self.user_interests) > 0:
-            historical_context += f"Previously detected interests: {', '.join(self.user_interests)}. "
-        
-        if hasattr(self, 'interest_frequency') and len(self.interest_frequency) > 0:
-            historical_context += "Interest frequency data: "
-            for interest, count in self.interest_frequency.items():
-                historical_context += f"{interest} (mentioned {count} times), "
-        
-        if hasattr(self, 'user_mood_history') and len(self.user_mood_history) > 0:
-            recent_moods = self.user_mood_history[-3:] if len(self.user_mood_history) > 3 else self.user_mood_history
-            historical_context += f"Recent emotional states: {', '.join(recent_moods)}. "
-        
-        # Add mood metrics context if available
-        if hasattr(self, 'mood_metrics'):
-            historical_context += f"Current mood metrics: Stress level: {self.mood_metrics['stress_level']}/10, "
-            historical_context += f"Willingness to talk: {self.mood_metrics['willingness_to_talk']}/10, "
-            historical_context += f"Engagement: {self.mood_metrics['engagement_coefficient']}/10, "
-            historical_context += f"Emotional depth: {self.mood_metrics['emotional_depth']}/10. "
-        
-        # Enhanced LLM prompt with our previously created detailed instructions
-        prompt_template = """
-        You are an expert in natural language understanding and user behavior analysis. Your task is to thoroughly analyze a user message and extract potential interests, topics, and emotional states with supporting evidence.
-
-        ANALYSIS GUIDELINES:
-        1. Identify explicit AND implicit interests
-        2. Recognize topic connections even when keywords aren't directly mentioned
-        3. Note the intensity/enthusiasm level for each detected interest (1-5 scale)
-        4. Track context from previous messages when available
-        5. Detect emotional states with nuance beyond simple positive/negative
-
-        MEMORY INTEGRATION:
-        - If frequency data is available in memory, use it to refine your analysis
-        - Note if current interests represent a continuation or shift from previous patterns
-        - Consider how often specific topics have appeared in past conversations
-        - Identify emergent patterns that may indicate deeper interests
-
-        USER HISTORICAL CONTEXT:
-        {historical_context}
-
-        USER MESSAGE:
-        {message}
-
-        OUTPUT FORMAT:
-        Return a structured JSON object with:
-
-        {{
-          "interests": [
-            {{
-              "category": "music",
-              "subcategories": ["kpop", "blackpink"], 
-              "keywords_detected": ["song", "concert"], 
-              "intensity": 4, 
-              "frequency": "increasing", 
-              "evidence": "User mentioned attending a concert twice and used enthusiastic language"
-            }}
-          ],
-          "emotional_state": {{
-            "primary": "excited",
-            "secondary": "anxious",
-            "evidence": "Language patterns show anticipation but also concern about ticket availability"
-          }},
-          "content_preferences": {{
-            "detail_level": "high", 
-            "tone_preference": "casual", 
-            "engagement_style": "collaborative" 
-          }},
-          "contextual_notes": "User shows deeper interest in music production compared to previous conversations about just listening",
-          "additional_metrics": {{
-            "attentiveness": 8,
-            "conversational_depth": 7,
-            "topic_enthusiasm": 9,
-            "message_thoughtfulness": 6,
-            "evidence": "User message shows considerable detail and follow-up to previous discussion"
-          }}
-        }}
-
-        Be thorough in your analysis but focus on EVIDENCE in the text rather than assumptions. Always prioritize precision over comprehensiveness.
-        """
-        
-        # Format the prompt with actual context
-        formatted_prompt = prompt_template.format(
-            historical_context=historical_context,
-            message=message
-        )
-        
-        # Call the LLM
-        llm = ChatOpenAI(model="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
-        tools = []
-        agent_executor = create_react_agent(
-            llm, 
-            tools, 
-            prompt=formatted_prompt
-        )
-        
-        # Update the invoke call to include proper message structure
-        response = agent_executor.invoke({
-            "messages": [
-                ("user", lowercase_msg)
-            ]
-        })
-
-        print(response)
-        
-        # Process the JSON response from the structured output
         try:
-            analysis_result = json.loads(response['messages'][-1].content)
+            # Basic emotion detection from keywords
+            emotion_keywords = {
+                "happy": ["happy", "excited", "glad", "joy", "wonderful", "great"],
+                "sad": ["sad", "upset", "unhappy", "depressed", "down"],
+                "angry": ["angry", "mad", "frustrated", "annoyed"],
+                "anxious": ["worried", "nervous", "anxious", "stressed"],
+                "neutral": ["okay", "fine", "alright"]
+            }
             
-            # Ensure additional_metrics are properly formatted
-            if 'additional_metrics' in analysis_result:
-                # Convert all metric values to numbers between 1-10
-                metrics = analysis_result['additional_metrics']
-                for key in ['attentiveness', 'conversational_depth', 'topic_enthusiasm', 'message_thoughtfulness']:
-                    if key in metrics and key != 'evidence':
-                        metrics[key] = min(10, max(1, int(metrics[key])))
+            # Interest categories for detection
+            interest_categories = {
+                "technology": ["computer", "programming", "code", "tech", "software"],
+                "anime": ["anime", "manga", "otaku", "weeb"],
+                "music": ["music", "song", "singing", "concert"],
+                "gaming": ["game", "gaming", "play"],
+                "art": ["art", "drawing", "design", "creative"]
+            }
             
-            # Update interest tracking
-            if not hasattr(self, 'user_interests'):
-                self.user_interests = set()
+            message_lower = message.lower()
             
-            # Extract and update interests
-            detected_interests = []
-            for interest in analysis_result.get('interests', []):
-                category = interest.get('category')
-                if category:
+            # Detect emotions
+            detected_emotions = []
+            for emotion, keywords in emotion_keywords.items():
+                if any(keyword in message_lower for keyword in keywords):
+                    detected_emotions.append(emotion)
+            
+            if detected_emotions:
+                analysis_result["emotional_state"]["primary"] = detected_emotions[0]
+                if len(detected_emotions) > 1:
+                    analysis_result["emotional_state"]["secondary"] = detected_emotions[1]
+                analysis_result["emotional_state"]["evidence"] = f"Detected keywords indicating {detected_emotions[0]}"
+            
+            # Detect interests
+            for category, keywords in interest_categories.items():
+                if any(keyword in message_lower for keyword in keywords):
                     self.user_interests.add(category)
-                    detected_interests.append(category)
-                    
-                    # Update frequency counter
-                    if category in self.interest_frequency:
-                        self.interest_frequency[category] += 1
-                    else:
-                        self.interest_frequency[category] = 1
-                    
-                    # Add subcategories if present
-                    for subcategory in interest.get('subcategories', []):
-                        self.user_interests.add(subcategory)
-                        
-                        # Update subcategory frequency
-                        if subcategory in self.interest_frequency:
-                            self.interest_frequency[subcategory] += 1
-                        else:
-                            self.interest_frequency[subcategory] = 1
+                    analysis_result["interests"].append({
+                        "category": category,
+                        "confidence": 0.8,  # Simple fixed confidence for now
+                        "subcategories": []
+                    })
             
-            # Extract mood
-            if 'emotional_state' in analysis_result:
-                mood = analysis_result['emotional_state'].get('primary', 'neutral')
-            else:
-                mood = 'neutral'
-            
-            if not hasattr(self, 'user_mood_history'):
-                self.user_mood_history = []
-            self.user_mood_history.append(mood)
-            
-            # Update mood metrics based on analysis
-            self.update_mood_metrics(analysis_result)
-            
-            # Store the complete analysis in memory
-            analysis_entry = Entry(
-                "system", 
-                f"User message analysis - Full result: {json.dumps(analysis_result, indent=2)}"
-            )
-            self.context._add_memory(analysis_entry)
-            
-            # Store mood metrics snapshot
-            metrics_entry = Entry(
-                "system",
-                f"Mood metrics updated - Stress: {self.mood_metrics['stress_level']}, Willingness: {self.mood_metrics['willingness_to_talk']}, Engagement: {self.mood_metrics['engagement_coefficient']}, Rapport: {self.mood_metrics['rapport_score']}"
-            )
-            self.context._add_memory(metrics_entry)
-            
-            # Return the complete analysis for use elsewhere
-            return analysis_result
-            
-        except (json.JSONDecodeError, TypeError) as e:
-            # Fallback to basic analysis if JSON parsing fails
-            print(f"Error parsing LLM response: {e}")
-            
-            # Simple basic analysis as fallback
-            interest_keywords = {
-                "music": ["music", "song", "sing", "concert", "album", "artist"],
-                "fashion": ["fashion", "style", "outfit", "clothes", "wear"],
-                "food": ["food", "eat", "cooking", "recipe", "restaurant"],
-                "travel": ["travel", "trip", "visit", "country", "place"],
-                "movies": ["movie", "film", "watch", "cinema", "show"],
-                "core": ["blackpink", "roses", "jisoo", "lisa", "jennie", "rose", "blackpink"]
+            # Analyze content preferences
+            analysis_result["content_preferences"] = {
+                "detail_level": "high" if len(message.split()) > 15 else "low",
+                "engagement_style": "enthusiastic" if "!" in message else "neutral",
+                "tone_preference": "casual"
             }
             
-            detected_interests = []
-            for interest, keywords in interest_keywords.items():
-                if any(keyword in lowercase_msg for keyword in keywords):
-                    self.user_interests.add(interest)
-                    detected_interests.append(interest)
-                    
-                    # Update frequency
-                    if interest in self.interest_frequency:
-                        self.interest_frequency[interest] += 1
-                    else:
-                        self.interest_frequency[interest] = 1
+        except Exception as e:
+            logger.error(f"Error analyzing message: {str(e)}")
+        
+        return analysis_result
+
+    async def add_to_memory(self, message: str, role: str = "user") -> None:
+        """Add a message to Rose's memory"""
+        self.context.add_conversation_entry(role, message)
+
+    async def get_relevant_context(self, current_message: str) -> List[Dict[str, Any]]:
+        """Get relevant conversation context for the current message"""
+        return self.context.get_conversation_history()
+
+    async def _update_mood_metrics(self, context: List[Dict[str, Any]]) -> None:
+        """Update mood metrics based on conversation context"""
+        if not context:
+            return
+
+        # Analyze recent interactions
+        recent_messages = [msg for msg in context if msg["role"] == "user"]
+        if recent_messages:
+            # Update engagement metrics
+            self.mood_metrics["engagement_coefficient"] = min(
+                10,
+                self.mood_metrics["engagement_coefficient"] + len(recent_messages) * 0.5
+            )
             
-            # Simple mood detection as fallback
-            mood = "neutral"
-            if any(word in lowercase_msg for word in ["happy", "glad", "excited", "great", "amazing"]):
-                mood = "positive"
-            elif any(word in lowercase_msg for word in ["sad", "upset", "angry", "tired", "stress"]):
-                mood = "negative"
-            
-            self.user_mood_history.append(mood)
-            
-            if mood == "positive":
-                self.mood_metrics["stress_level"] = max(1, self.mood_metrics["stress_level"] - 0.5)
-                self.mood_metrics["energy_level"] = min(10, self.mood_metrics["energy_level"] + 0.5)
-            elif mood == "negative":
-                self.mood_metrics["stress_level"] = min(10, self.mood_metrics["stress_level"] + 0.5)
-                self.mood_metrics["energy_level"] = max(1, self.mood_metrics["energy_level"] - 0.5)
-            
-            msg_length = len(message)
-            if msg_length > 100:
-                self.mood_metrics["willingness_to_talk"] = min(10, self.mood_metrics["willingness_to_talk"] + 0.5)
-                self.mood_metrics["engagement_coefficient"] = min(10, self.mood_metrics["engagement_coefficient"] + 0.5)
-            elif msg_length < 20:
-                self.mood_metrics["willingness_to_talk"] = max(1, self.mood_metrics["willingness_to_talk"] - 0.5)
-                self.mood_metrics["engagement_coefficient"] = max(1, self.mood_metrics["engagement_coefficient"] - 0.5)
-              
-            # In the fallback case, provide similar metrics structure
-            fallback_result = {
-                "interests": [{"category": interest, "intensity": 3} for interest in detected_interests],
-                "emotional_state": {"primary": mood},
-                "content_preferences": {"detail_level": "medium", "tone_preference": "casual"},
-                "additional_metrics": {
-                    "attentiveness": 5,
-                    "conversational_depth": 3,
-                    "topic_enthusiasm": 4,
-                    "message_thoughtfulness": 3,
-                    "evidence": "Fallback metrics due to parsing error"
-                }
-            }
-            
-            analysis_entry = Entry(
-                "system", 
-                f"User message analysis (fallback) - Interests: {detected_interests}, Mood: {mood}"
+            # Update emotional depth based on message content
+            emotional_content = sum(
+                1 for msg in recent_messages 
+                if any(word in msg["content"].lower() for word in ["feel", "think", "believe", "love", "miss"])
+            )
+            self.mood_metrics["emotional_depth"] = min(
+                10,
+                self.mood_metrics["emotional_depth"] + emotional_content * 0.5
             )
 
-            self.context._add_memory(analysis_entry)
-            
-            return fallback_result
+    def _add_contextual_reference(self, message: str, previous_message: str) -> str:
+        """Add contextual references based on previous message content"""
+        # Check for questions and provide acknowledgment
+        if "?" in previous_message:
+            return f"{message}\n\nI hope that answers your question!"
+        
+        # Check for emotional content
+        emotional_words = ["sad", "happy", "angry", "excited", "worried", "love", "miss"]
+        if any(word in previous_message.lower() for word in emotional_words):
+            return f"{message}\n\nI really appreciate you sharing your feelings with me 💕"
+        
+        # Check for tech discussion
+        tech_words = ["computer", "gpu", "code", "programming", "software"]
+        if any(word in previous_message.lower() for word in tech_words):
+            return f"{message}\n\nIt's always fun discussing tech with you! 💻✨"
+        
+        # Default case - maintain conversation flow
+        return message
