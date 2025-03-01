@@ -132,6 +132,7 @@ interface Message {
   metadata?: any;
   reasoningSteps?: string[];
   audio?: string;
+  tradeActions?: string[];
 }
 
 interface ChatResponse {
@@ -178,6 +179,16 @@ interface Metrics {
   engagement_coefficient: number;
   emotional_depth: number;
   rapport_score: number;
+}
+
+interface TradeResponse {
+  status: string;
+  actions: string[];
+  metadata: {
+    execution_time?: string;
+    total_actions?: number;
+    status?: string;
+  };
 }
 
 async function sendMessage(message: string, previousContext?: ChatContext) {
@@ -228,6 +239,55 @@ async function generateAudioResponse(text: string) {
   } catch (error) {
     console.error('Error generating audio:', error);
     return null;
+  }
+}
+
+async function executeTrade(command: { role: string, content: string }): Promise<TradeResponse> {
+  try {
+    console.log('Executing trade request...');
+    
+    const response = await fetch('http://localhost:8001/trade', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: command.content  // Just send the message content
+      }),
+    });
+    
+    console.log('Trade API response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'No error text available');
+      console.error(`Trade request failed: ${response.status}`, errorText);
+      throw new Error(`Trade request failed: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Trade response data:', data);
+    
+    // Ensure the response matches TradeResponse interface
+    return {
+      status: data.status || 'error',
+      actions: data.actions || [],
+      metadata: {
+        execution_time: data.metadata?.execution_time || '0ms',
+        total_actions: data.metadata?.total_actions || 0,
+        status: data.metadata?.status || 'failed'
+      }
+    };
+  } catch (error) {
+    console.error('Error executing trade:', error);
+    return {
+      status: 'error',
+      actions: ['Failed to execute trade due to API error'],
+      metadata: {
+        execution_time: '0ms',
+        total_actions: 0,
+        status: 'failed'
+      }
+    };
   }
 }
 
@@ -307,6 +367,49 @@ export default function Chat() {
 
     let audioUrl = null;
 
+    // Handle trading mode separately from chat
+    if (tradingMode) {
+      try {
+        console.log('Trading mode active, executing trade...');
+        const tradeResponse = await executeTrade({
+          role: "user",
+          content: input
+        });
+        
+        // Create message pair for trade execution
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          role: 'user',
+          content: input,
+          createdAt: new Date(),
+        };
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: `Trade execution ${tradeResponse.status}:\n${tradeResponse.actions.join('\n')}`,
+          createdAt: new Date(),
+          tradeActions: tradeResponse.actions,
+        };
+
+        setMessages(prev => [...prev, userMessage, assistantMessage]);
+        setInput('');
+        return;
+      } catch (error) {
+        console.error('Trading error:', error);
+        // Add error message to chat
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: "Failed to execute trade. Please try again later.",
+          createdAt: new Date(),
+        }]);
+        setInput('');
+        return;
+      }
+    }
+
+    // Regular chat flow continues here for non-trading mode
     // Get audio URL if recording and voice mode is enabled
     if (voiceMode && isRecording && audioRecorderRef.current) {
       audioUrl = audioRecorderRef.current.getAudioUrl();
@@ -327,6 +430,7 @@ export default function Chat() {
       role: 'user',
       content: input || (audioUrl ? '🎤 Audio message' : ''),
       createdAt: new Date(),
+      tradeActions: undefined,
     };
 
     if (audioUrl && voiceMode) {
@@ -361,7 +465,7 @@ export default function Chat() {
       };
       setMetrics(newMetrics);
 
-      // Create AI response message
+      // Create AI response message with trade actions if present
       const cleanMessage = extractCleanMessage(aiResponse);
       const assistantMessage: Message = {
         id: Date.now().toString(),
@@ -372,7 +476,8 @@ export default function Chat() {
         createdAt: new Date(),
         context: context,
         metadata: metadata,
-        audio: audioUrl || undefined
+        audio: audioUrl || undefined,
+        tradeActions: undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -423,16 +528,6 @@ export default function Chat() {
 
   const handleAudioReady = (url: string) => {
     setRecordedAudioUrl(url);
-  };
-
-  const handleDeveloperMode = () => {
-    // Toggle showing raw AI responses in console
-    const lastAssistantMsg = messages.filter(m => m.role === 'assistant').pop();
-    if (lastAssistantMsg && lastAssistantMsg.rawContent) {
-      console.log('Raw AI response:', lastAssistantMsg.rawContent);
-      console.log('Message context:', lastAssistantMsg.context);
-      console.log('Message metadata:', lastAssistantMsg.metadata);
-    }
   };
 
   const gf_name = 'Cranberry';
@@ -552,6 +647,28 @@ export default function Chat() {
                         >
                           {message.displayContent}
                         </ReactMarkdown>
+                      </div>
+                    )}
+
+                    {message.tradeActions && message.tradeActions.length > 0 && (
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md border border-gray-200">
+                        <p className="text-sm font-semibold text-gray-700 mb-2">Trade Actions</p>
+                        <div className="prose prose-sm max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              pre: ({ node, ...props }) => (
+                                <div className="overflow-auto my-2 bg-gray-100 p-2 rounded">
+                                  <pre {...props} />
+                                </div>
+                              ),
+                              code: ({ node, ...props }) => (
+                                <code className="bg-gray-100 rounded px-1" {...props} />
+                              ),
+                            }}
+                          >
+                            {message.tradeActions.join('\n')}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                     )}
 

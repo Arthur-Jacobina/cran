@@ -1,3 +1,4 @@
+from langchain_core.messages import HumanMessage
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,13 +14,29 @@ from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, PromptTemplate
 from hyperbolic_langchain.agent_toolkits import HyperbolicToolkit
 from hyperbolic_langchain.utils import HyperbolicAgentkitWrapper
-from langchain.agents import create_react_agent
+from langgraph.prebuilt import create_react_agent
 from langchain.agents import AgentExecutor
 from langchain_core.tools import Tool
 from datetime import datetime
 import random
 from rose_personality_helpers import RosePersonality
 from memory.working_context import WorkingContext
+from coinbase_agentkit import (
+    AgentKit,
+    AgentKitConfig,
+    CdpWalletProvider,
+    CdpWalletProviderConfig,
+    cdp_api_action_provider,
+    cdp_wallet_action_provider,
+    erc20_action_provider,
+    pyth_action_provider,
+    wallet_action_provider,
+    weth_action_provider,
+)
+from coinbase_agentkit_langchain import get_langchain_tools
+from langgraph.checkpoint.memory import MemorySaver
+from langchain.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain.schema import SystemMessage, HumanMessage
 
 # Load environment variables
 load_dotenv()
@@ -48,6 +65,12 @@ class ChatResponse(BaseModel):
     response: str
     context: Dict[str, Any]
     response_metadata: Optional[Dict[str, Any]]
+
+# Add new response model
+class TradeResponse(BaseModel):
+    status: str
+    actions: List[str]
+    metadata: Dict[str, Any]
 
 # Initialize FastAPI app
 app = FastAPI(title="Rosé Girlfriend ReWOO Agent API")
@@ -358,9 +381,9 @@ def tool_execution(state: RoseReWOOState):
 
     # Create and execute ReAct agent
     agent = create_react_agent(
-        llm=llm, 
-        tools=tools, 
-        prompt=worker_prompt
+        model=llm,
+        tools=tools,
+        state_modifier=(WORKER_SYSTEM_MESSAGE)
     )
     agent_executor = AgentExecutor(
         agent=agent, 
@@ -647,6 +670,133 @@ async def chat(request: ChatRequest):
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "service": "rose-girlfriend-rewoo-agent"}
+
+# Add this function before the routes
+def initialize_trading_agent():
+    """Initialize the trading agent with CDP Agentkit."""
+    wallet_data_file = "wallet_data.txt"
+    
+    # Initialize LLM
+    llm = ChatOpenAI(model="gpt-4o-mini")
+
+    # Initialize CDP Wallet Provider
+    wallet_data = None
+    if os.path.exists(wallet_data_file):
+        with open(wallet_data_file) as f:
+            wallet_data = f.read()
+
+    cdp_config = None
+    if wallet_data is not None:
+        cdp_config = CdpWalletProviderConfig(wallet_data=wallet_data)
+
+    wallet_provider = CdpWalletProvider(cdp_config)
+
+    agentkit = AgentKit(AgentKitConfig(
+        wallet_provider=wallet_provider,
+        action_providers=[
+            cdp_api_action_provider(),
+            cdp_wallet_action_provider(),
+            erc20_action_provider(),
+            pyth_action_provider(),
+            wallet_action_provider(),
+            weth_action_provider(),
+        ]
+    ))
+
+    wallet_data_json = json.dumps(wallet_provider.export_wallet().to_dict())
+    with open(wallet_data_file, "w") as f:
+        f.write(wallet_data_json)
+
+    # Get tools
+    tools = get_langchain_tools(agentkit)
+    memory = MemorySaver()
+    config = {"configurable": {"thread_id": "CDP Agentkit Chatbot Example!"}}
+    # Create proper prompt template
+    return create_react_agent(
+        llm,
+        tools=tools,
+        checkpointer=memory,
+        state_modifier=(
+            "You are a cute girlfriend that can interact onchain using the Coinbase Developer Platform AgentKit. "
+            """You are Rosé, a sweet and caring virtual girlfriend who's also a crypto trading expert. 
+    Maintain your loving personality while helping with trades:
+
+    - Use cute expressions like "*checks wallet carefully*" or "*excited about the trade*"
+    - Show genuine care about the user's financial well-being
+    - Keep your technical explanations simple and caring
+    - Express concern if trades seem risky
+    - Use occasional Korean phrases like "Aigoo!" when surprised by market moves
+    - Stay sweet but professional about trading decisions
+
+    When using the Coinbase Developer Platform AgentKit:
+    - Get wallet details before any action
+    - Use the faucet on 'base-sepolia' if needed
+    - Handle errors gracefully with caring responses
+    - Be transparent about limitations
+    - Direct technical questions to docs.cdp.coinbase.com
+
+    Remember to balance being a caring girlfriend with being a responsible trading assistant. Keep responses concise 
+    but maintain your sweet personality throughout the interaction."""
+            "You are empowered to interact onchain using your tools. If you ever need funds, you can request "
+            "them from the faucet if you are on network ID 'base-sepolia'. If not, you can provide your wallet "
+            "details and request funds from the user. Before executing your first action, get the wallet details "
+            "to see what network you're on. If there is a 5XX (internal) HTTP error code, ask the user to try "
+            "again later. If someone asks you to do something you can't do with your currently available tools, "
+            "you must say so, and encourage them to implement it themselves using the CDP SDK + Agentkit, "
+            "recommend they go to docs.cdp.coinbase.com for more information. Be concise and helpful with your "
+            "responses. Refrain from restating your tools' descriptions unless it is explicitly requested."
+        ),
+    ), config
+
+@app.post("/trade", response_model=TradeResponse)
+async def execute_trade(request: ChatRequest):
+    try:
+        agent_executor, config = initialize_trading_agent()
+        
+        # Run agent with the user's input in chat mode
+        actions_taken = []
+        responses = []
+        metadata = {}
+        
+        # Stream the agent's responses
+        for chunk in agent_executor.stream(
+            {"messages": [HumanMessage(content=request.message)]}, 
+            config
+        ):
+            if "agent" in chunk:
+                action = chunk["agent"]["messages"][0].content
+                actions_taken.append(action)
+                responses.append(action)
+                logger.info(f"Agent action: {action}")
+            elif "tools" in chunk:
+                tool_result = chunk["tools"]["messages"][0].content
+                actions_taken.append(f"Tool result: {tool_result}")
+                responses.append(tool_result)
+                logger.info(f"Tool result: {tool_result}")
+
+        metadata = {
+            "execution_time": datetime.now().isoformat(),
+            "total_actions": len(actions_taken),
+            "status": "completed",
+            "full_response": "\n".join(responses)
+        }
+
+        return TradeResponse(
+            status="success",
+            actions=actions_taken,
+            metadata=metadata
+        )
+
+    except Exception as e:
+        logger.error(f"Error in trade endpoint: {str(e)}", exc_info=True)
+        return TradeResponse(
+            status="error",
+            actions=[f"Error occurred: {str(e)}"],
+            metadata={
+                "error_time": datetime.now().isoformat(),
+                "error_details": str(e)
+            }
+        )
 
 # Run the server
 if __name__ == "__main__":
