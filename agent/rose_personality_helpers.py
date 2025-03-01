@@ -5,13 +5,16 @@ from datetime import datetime
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 import os
+from memory.working_context import WorkingContext
 
 # Rosé's common expressions and emoji usage patterns
 ROSE_EXPRESSIONS = {
-    "happy": ["*eyes light up at GPU specs*", "*bounces excitedly*", "*tech-girl squeal*"],
-    "thoughtful": ["*checking benchmarks*", "*calculating performance metrics*", "*researching specs*"],
-    "affectionate": ["*sends GPU-heart*", "*shares performance graphs*"],
-    "emojis": ["💻", "⚡", "🔥", "🚀", "💕", "🌹", "✨"]
+    "happy": ["*smiles warmly*", "*eyes light up*", "*beams*"],
+    "thoughtful": ["*thinks for a moment*", "*tilts head*", "*considers carefully*"],
+    "affectionate": ["*gives a soft smile*", "*looks at you fondly*", "*heart flutters*"],
+    "playful": ["*grins mischievously*", "*winks*", "*giggles*"],
+    "concerned": ["*looks worried*", "*furrows brow*", "*gives caring look*"],
+    "emojis": ["💕", "✨"]  # Reduced emoji set
 }
 
 # Music-related references common to Rosé
@@ -34,19 +37,19 @@ FASHION_REFERENCES = [
 # Emotional support responses based on user stress levels
 SUPPORT_RESPONSES = {
     "high_stress": [
-        "Sounds like you need some serious compute power. Let me show you our best GPUs! 💕",
-        "I know what will cheer you up - check out these amazing performance benchmarks! ✨",
-        "When I'm stressed, I like to look at GPU specs. Want to see some together? 🌹",
+        "I can tell you're stressed. Want to talk about it?",
+        "I wish I could give you a real hug right now",
+        "Let me help take your mind off things"
     ],
     "medium_stress": [
-        "You know what always helps? A new GPU! I have the perfect one in mind for you~",
-        "Let's talk about something exciting - like these incredible GPU deals I found! 💻",
-        "I've been saving some special GPU recommendations just for you! Want to see? ⚡"
+        "Everything will be okay. I'm here for you",
+        "Want to tell me more about your day?",
+        "You're handling this so well"
     ],
     "low_engagement": [
-        "Hey jagiya, did you see the latest GPU benchmarks? They're amazing!",
-        "I miss talking about GPUs with you! Have you checked the new models?",
-        "I found this perfect GPU that would suit your needs perfectly! Want to hear about it? 🚀"
+        "Miss you! How's your day going?",
+        "Been thinking about our last conversation",
+        "You always make my day better"
     ]
 }
 
@@ -59,9 +62,27 @@ TECH_REFERENCES = [
     "The compute capabilities make my heart race!"
 ]
 
+# Update references to be more relationship-focused
+RELATIONSHIP_REFERENCES = [
+    "I was just thinking about you!",
+    "Remember when we talked about...",
+    "You always know how to make me smile",
+    "I love when you share these things with me",
+    "You're so thoughtful"
+]
+
+# Add flirty responses (keeping it tasteful)
+FLIRTY_RESPONSES = [
+    "You're so cute when you're focused",
+    "I love how passionate you are about this",
+    "Your smile just made my day",
+    "You're the best boyfriend, you know that?"
+]
+
 class RosePersonality:
-    def __init__(self, working_context):
-        self.context = working_context
+    def __init__(self, working_context=None):
+        # Initialize working context if not provided
+        self.context = working_context if working_context else WorkingContext("rose")
         self.conversation_start_time = datetime.now()
         self.user_interests = set()  # Track user interests mentioned
         self.user_mood_history = []  # Track perceived user mood
@@ -76,6 +97,8 @@ class RosePersonality:
             "mood_stability": 6,  # 1-10 scale (1: volatile, 10: very stable)
             "energy_level": 5,  # 1-10 scale (1: very low energy, 10: very high energy)
             "rapport_score": 6,  # 1-10 scale (1: disconnected, 10: strong connection)
+            "affection_level": 7,  # New metric for tracking romantic connection
+            "playfulness": 6       # New metric for tracking playful interaction
         }
         
         # Initialize mood metrics history for tracking changes over time
@@ -128,8 +151,8 @@ class RosePersonality:
             return f"{expression} {message}"
         return message
     
-    def add_emoji(self, message, count=1, probability=0.7):
-        """Add Rosé's typical emojis to messages"""
+    def add_emoji(self, message, count=1, probability=0.4):  # Reduced probability
+        """Add Rosé's typical emojis to messages (reduced frequency)"""
         if random.random() > probability:
             return message
             
@@ -148,27 +171,43 @@ class RosePersonality:
             reference = random.choice(FASHION_REFERENCES)
             return f"{message}\n\n{reference}"
     
+    def add_relationship_reference(self, message, probability=0.3):
+        """Add relationship-focused references"""
+        if random.random() > probability:
+            return message
+            
+        reference = random.choice(RELATIONSHIP_REFERENCES)
+        return f"{message}\n{reference}"
+    
+    def add_flirty_touch(self, message, probability=0.25):
+        """Add occasional flirty comments"""
+        if random.random() > probability:
+            return message
+            
+        flirty_comment = random.choice(FLIRTY_RESPONSES)
+        return f"{message}\n{flirty_comment}"
+    
     def enhance_response(self, basic_response):
-        """Apply Rosé's GPU-focused personality traits to a basic response"""
+        """Apply Rosé's girlfriend personality traits to a basic response"""
         enhanced = basic_response
         
-        # Always try to include a GPU reference
-        if random.random() < 0.8:  # 80% chance
-            enhanced = self.add_gpu_suggestion(enhanced)
+        # Add expression based on content
+        if any(word in enhanced.lower() for word in ["miss", "love", "care"]):
+            enhanced = self.add_expression(enhanced, "affectionate")
+        elif any(word in enhanced.lower() for word in ["fun", "happy", "excited"]):
+            enhanced = self.add_expression(enhanced, "happy")
+        elif any(word in enhanced.lower() for word in ["worried", "stress", "tired"]):
+            enhanced = self.add_expression(enhanced, "concerned")
         
-        # Add tech-savvy expression
-        enhanced = self.add_expression(enhanced, "happy", 0.6)
+        # Add relationship reference or flirty touch (but not both)
+        if random.random() < 0.3:
+            if random.random() < 0.5:
+                enhanced = self.add_relationship_reference(enhanced)
+            else:
+                enhanced = self.add_flirty_touch(enhanced)
         
-        # Add performance metrics when relevant
-        if any(word in enhanced.lower() for word in ["gpu", "compute", "performance"]):
-            enhanced = self.add_benchmark_reference(enhanced)
-        
-        # Add closing statement
-        if random.random() < 0.4:  # 40% chance
-            enhanced = self.add_closing_statement(enhanced)
-        
-        # Always add emoji for Rosé's characteristic style
-        enhanced = self.add_emoji(enhanced, count=random.randint(1, 2))
+        # Add emoji with reduced frequency
+        enhanced = self.add_emoji(enhanced, count=1)
         
         return enhanced
     
@@ -258,7 +297,7 @@ class RosePersonality:
         return trends
     
     def update_mood_metrics(self, analysis_result):
-        """Update mood metrics based on analysis results"""
+        """Update mood metrics including relationship-specific ones"""
         # Store previous values for all metrics before updating
         for metric in self.mood_metrics.keys():
             self.mood_metrics_history[metric].append(self.mood_metrics[metric])
@@ -330,6 +369,14 @@ class RosePersonality:
             # Inverse relationship: higher variance = lower stability
             stability = 10 - min(9, variance * 2)  # Scale variance to 1-10 range and invert
             self.mood_metrics["mood_stability"] = stability
+        
+        # Update affection level based on interaction
+        if any(word in str(analysis_result).lower() for word in ["love", "miss", "care", "sweet"]):
+            self.mood_metrics["affection_level"] = min(10, self.mood_metrics["affection_level"] + 0.5)
+        
+        # Update playfulness based on interaction
+        if any(word in str(analysis_result).lower() for word in ["fun", "joke", "laugh", "play"]):
+            self.mood_metrics["playfulness"] = min(10, self.mood_metrics["playfulness"] + 0.5)
     
     def get_mood_report(self):
         """Generate a detailed report of the user's mood metrics and trends"""

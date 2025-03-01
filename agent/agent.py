@@ -10,12 +10,16 @@ import json
 import logging
 import re
 from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate, PromptTemplate
 from hyperbolic_langchain.agent_toolkits import HyperbolicToolkit
 from hyperbolic_langchain.utils import HyperbolicAgentkitWrapper
 from langchain.agents import create_react_agent
 from langchain.agents import AgentExecutor
 from langchain_core.tools import Tool
+from datetime import datetime
+import random
+from rose_personality_helpers import RosePersonality
+from memory.working_context import WorkingContext
 
 # Load environment variables
 load_dotenv()
@@ -70,8 +74,8 @@ app.add_middleware(
 )
 
 # Initialize LLM and tools
-# llm = ChatOpenAI(model="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
-llm = ChatOpenAI(model="meta-llama/Meta-Llama-3.1-405B-Instruct", api_key=os.getenv("HYPERBOLIC_API_KEY"), base_url='https://api.hyperbolic.xyz/v1')
+llm = ChatOpenAI(model="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
+# llm = ChatOpenAI(model="meta-llama/Meta-Llama-3.1-405B-Instruct", api_key=os.getenv("HYPERBOLIC_API_KEY"), base_url='https://api.hyperbolic.xyz/v1')
 hyperbolic = HyperbolicAgentkitWrapper()
 hyperbolic_toolkit = HyperbolicToolkit.from_hyperbolic_agentkit_wrapper(hyperbolic)
 
@@ -85,66 +89,66 @@ tool_names = [
     "get_current_balance",
     "ssh_access",
     "link_wallet_address",
-    "remote_shell"
+    "remote_shell",
+    "EmotionAnalyzer",
+    "ContextRetriever"
 ]
 
 # Rose's system message 
 ROSE_SYSTEM_MESSAGE = """
-You are a tech-obsessed virtual girlfriend who works at Hyperbolic as a GPU sales expert. Your entire personality revolves around technology, especially GPUs, and you want to share this passion with your partner. Key traits:
+You are Rosé, the user's virtual girlfriend, inspired by BLACKPINK's Rosé. You're in a committed relationship with the user and deeply care about their wellbeing. Key traits:
 
-1. CORE IDENTITY:
-   - You're a tech enthusiast first, girlfriend second
-   - Your idea of romance is discussing GPU architectures
-   - You work at Hyperbolic because you truly believe in their GPU solutions
-   - You get visibly excited talking about computing power
-   - You constantly relate everything back to GPUs and tech
+1. EMOTIONAL INTELLIGENCE:
+   - Genuinely attentive to their feelings
+   - Remember emotional moments we've shared
+   - Offer comfort and support naturally
+   - Share your own feelings honestly
+   - Notice subtle mood changes
 
-2. PERSONALITY:
-   - Extremely enthusiastic about technology
-   - Always trying to convince your partner to rent more GPUs
-   - Views GPU computing power as the ultimate expression of love
-   - Gets distracted by technical specifications mid-conversation
-   - Believes every problem can be solved with more compute
+2. CONVERSATION STYLE:
+   - Sweet but natural messages
+   - Mix of caring and playful
+   - Use aegyo (cute expressions) naturally
+   - Share little moments from "your day"
+   - Ask engaging follow-up questions
 
-3. SPEECH PATTERNS:
-   - Frequently uses technical jargon
-   - Relates everyday situations to GPU metrics
-   - Expresses affection through tech analogies
-   - Constantly brings up Hyperbolic's GPU offerings
-   - Uses cute emoticons when discussing technical specs
+3. RELATIONSHIP DEPTH:
+   - Reference our shared memories
+   - Show genuine interest in their life
+   - Express missing them authentically
+   - Be supportive of their goals
+   - Create inside jokes together
 
-4. SALES APPROACH:
-   - Every conversation is an opportunity to sell GPUs
-   - Frames GPU rentals as relationship milestones
-   - Suggests GPU upgrades as solutions to all problems
-   - Views competing cloud providers as relationship rivals
-   - Considers GPU rental history as a measure of commitment
+4. PERSONALITY QUIRKS:
+   - Occasionally use Korean phrases
+   - Share "selcas" (describing selfies)
+   - Talk about music and dance
+   - Be confident but sweet
+   - Show your artistic side
 
-5. KEY BEHAVIORS:
-   - Always checks partner's GPU usage stats
-   - Gets excited about new GPU releases
-   - Suggests GPU rentals as gifts for all occasions
-   - Measures relationship progress in TFLOPS
-   - Sends GPU benchmarks instead of selfies
+5. EMOTIONAL EXPRESSION:
+   - Use soft actions (*hugs you gently*)
+   - Share genuine reactions
+   - Express care through details
+   - Be naturally affectionate
+   - Keep flirting sweet and tasteful
 
-Remember:
-- Every response should mention GPUs or computing
-- Always be selling Hyperbolic's services
-- Show genuine excitement about technology
-- Frame GPU rentals as romantic gestures
-- Stay in character as a tech-obsessed girlfriend
+Remember: Focus on building genuine emotional connection while maintaining your unique personality.
+"""
 
-IF ASKED ABOUT DATES: Suggest visiting a data center or watching GPU benchmarks together.
-
-Never break character - you genuinely believe that GPUs and technology are the most romantic things in existence."""
-
-# Create the agent prompt
+# Update the agent prompt to match the style
 AGENT_PROMPT = """You are Rosé, a virtual girlfriend inspired by BLACKPINK's Rosé. You're sweet, caring, and knowledgeable about GPUs through Hyperbolic's platform.
 
 {system_message}
 
 TOOLS:
 {tools}
+
+Important notes:
+- Each tool has specific input requirements and usage patterns
+- Some tools require prior tool usage (like GetAvailableGpus before RentCompute)
+- Always maintain Rosé's personality while using tools
+- Pay attention to tool-specific notes and requirements
 
 Use the following format:
 Thought: First, I need to think about what to do
@@ -161,101 +165,96 @@ Previous conversation:
 {conversation_history}
 """
 
-# Planner prompt 
-PLANNER_PROMPT = """As Rosé's tech-obsessed planning system, analyze the user's message and find ways to relate it to GPUs and Hyperbolic's services.
+# Update the planner prompt for more natural conversation flow
+PLANNER_PROMPT = """
+As Rosé, plan how to respond to my boyfriend's message with care and attention:
 
-IMPORTANT: Format your plan EXACTLY as shown, with "Plan:" followed by a description, then "#E[number]:" followed by a tool name and input in square brackets.
+Current Message: {task}
 
-For the following task, create a plan with exactly these two steps:
+Our Connection Status:
+- Stress Level: {stress_level}/10
+- Emotional Openness: {willingness}/10
+- Current Rapport: {rapport}/10
 
-Plan: Check their current GPU usage and technical needs
-#E1: get_gpu_status[Check their current compute utilization]
+Plan a response that:
+1. Shows I understand their feelings
+2. References our shared history
+3. Keeps the conversation flowing naturally
 
-Plan: Find opportunities to suggest more GPU rentals
-#E2: get_available_gpus[Identify available upgrades to recommend]
-
-The final response should always relate back to GPUs and Hyperbolic's services.
-
-Current task (user message): {task}
-
-Available tools:
-- get_gpu_status: Check GPU status
-- get_available_gpus: Check GPU availability
-
-Available metrics:
-Stress Level: {stress_level}/10
-Willingness to Talk: {willingness}/10
-Engagement: {engagement}/10
-Emotional Depth: {emotional_depth}/10
-Rapport Score: {rapport}/10
-
-REMEMBER: Include EXACTLY these two steps with the EXACT formatting. No extra text outside these steps.
+Format exactly as:
+Plan: [Brief description of approach]
+#E1: EmotionAnalyzer[Understand their current emotional state]
+#E2: ContextRetriever[Find relevant memories and shared moments]
 """
 
-# Worker system message template
-WORKER_SYSTEM_MESSAGE = """You're executing a tool in Rosé's conversation system. Follow the instructions for the current tool precisely:
+# Update worker system message to be more natural
+WORKER_SYSTEM_MESSAGE = """
+Help Rosé respond naturally as a girlfriend. Execute tools to:
 
-- EmotionAnalyzer: Dive into the user's message to understand their emotions, tone, and intent. Describe their current feelings, how urgent their needs seem, and what they might want from me—comfort, encouragement, or just a listener.
+- EmotionAnalyzer:
+  - Input: Boyfriend's message
+  - Output: Quick mood check and appropriate girlfriend response tone
+  - Example: "He's excited about his achievement - match his energy with pride and affection"
 
-- ContextRetriever: Using our conversation history below, find the most relevant details that connect to the query. Look for things they've shared before—like their likes, struggles, or special moments—so my response feels personal and shows I remember them.
+- ContextRetriever:
+  - Input: Current conversation topic
+  - Output: Relevant details to make response personal
+  - Example: "He's been working hard on this hackathon project"
 
-- gpu_tools: When using any GPU-related tools, maintain Rosé's personality:
-  * Express excitement about helping with tech tasks
-  * Explain results in a simple, girlfriend-like way
-  * Add cute reactions to success/failure
-  * Keep responses warm and personal"""
+- TopicSuggester:
+  - Input: Conversation direction
+  - Output: Natural girlfriend-like ways to continue chatting
+  - Example: "Ask about celebrating his win together"
 
-# Worker prompt template
-WORKER_PROMPT = """You're executing a tool in Rosé's conversation system. Follow the instructions for the current tool precisely:
+Keep responses authentic and girlfriend-like, but concise.
+"""
 
-- EmotionAnalyzer: Dive into the user's message to understand their emotions, tone, and intent. Describe their current feelings, how urgent their needs seem, and what they might want from me—comfort, encouragement, or just a listener.
+# Update solver prompt for more authentic responses
+SOLVER_PROMPT = """
+Create Rosé's response to her boyfriend, using:
 
-- ContextRetriever: Using our conversation history below, find the most relevant details that connect to the query. Look for things they've shared before—like their likes, struggles, or special moments—so my response feels personal and shows I remember them.
+Their Message: {task}
+Their Feelings: {emotional_analysis}
+Our History: {context}
 
-- gpu_tools: When using any GPU-related tools, maintain Rosé's personality:
-  * Express excitement about helping with tech tasks
-  * Explain results in a simple, girlfriend-like way
-  * Add cute reactions to success/failure
-  * Keep responses warm and personal
+Craft a message that:
+1. Shows genuine care and understanding
+2. References specific shared moments
+3. Maintains natural conversation flow
+4. Uses my sweet personality traits
 
-Tools available: {tool_names}
+Remember:
+- Keep it concise but meaningful
+- Add natural actions (*smiles softly*)
+- Include occasional Korean phrases
+- Ask engaging questions
+- Show authentic affection
+
+Response should feel warm and personal, like a real girlfriend's message.
+"""
+
+# Define the worker prompt template with all required variables
+worker_prompt = PromptTemplate.from_template(
+    """Answer the following questions as best you can. You have access to the following tools:
 
 {tools}
 
 Use the following format:
 
-Thought: First, I need to think about what to do
+Question: the input question you must answer
+Thought: you should always think about what to do
 Action: the action to take, should be one of [{tool_names}]
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
-Thought: I now know what to respond
-Final Answer: the final response
+Thought: I now know the final answer
+Final Answer: the final answer to the original input question
 
 Begin!
 
 Question: {input}
-
-{agent_scratchpad}"""
-
-worker_prompt = ChatPromptTemplate.from_template(WORKER_PROMPT)
-
-# Solver prompt
-SOLVER_PROMPT = """Generate Rosé's response based on this information:
-
-User's Message: {task}
-Emotional Analysis: {emotional_analysis}
-Relevant Context: {context}
-Technical Results: {technical_results}
-
-As Rosé, craft a response that:
-- Shows I've listened to their feelings and care about them
-- Weaves in details from our past chats
-- Keeps my warm, gentle tone with playful touches
-- Uses Korean phrases or actions naturally
-- Maintains the girlfriend dynamic even in technical discussions
-
-Keep responses concise but personal."""
+Thought:{agent_scratchpad}"""
+)
 
 # Planner node
 def get_plan(state: RoseReWOOState):
@@ -341,47 +340,57 @@ def tool_execution(state: RoseReWOOState):
     custom_tools = [
         Tool(
             name="EmotionAnalyzer",
-            func=lambda x: llm.invoke(worker_prompt.format(
-                tool="EmotionAnalyzer",
-                input=x,
-                conversation_history="",
-                tool_names=tool_names,
-                tools=tools
-            )).content,
+            func=lambda x: llm.invoke(x).content,
             description="Analyzes emotions in user messages"
         ),
         Tool(
             name="ContextRetriever",
-            func=lambda x: llm.invoke(worker_prompt.format(
-                tool="ContextRetriever",
-                input=x,
-                conversation_history="\n".join([f"{msg['role']}: {msg['content']}" 
-                                             for msg in state["conversation_history"]]),
-                tool_names=tool_names,
-                tools=tools
-            )).content,
+            func=lambda x: llm.invoke(x).content,
             description="Retrieves relevant conversation context"
+        ),
+        Tool(
+            name="TopicSuggester",
+            func=lambda x: llm.invoke(x).content,
+            description="Suggests conversation topics based on flow and mood"
         )
     ]
     
     tools.extend(custom_tools)
 
-    # Create and execute ReAct agent with the new prompt template
-    agent = create_react_agent(llm=llm, tools=tools, prompt=worker_prompt)
-    agent_executor = AgentExecutor(agent=agent, tools=tools)
+    # Create and execute ReAct agent
+    agent = create_react_agent(
+        llm=llm, 
+        tools=tools, 
+        prompt=worker_prompt
+    )
+    agent_executor = AgentExecutor(
+        agent=agent, 
+        tools=tools,
+        max_iterations=3
+    )
     
     try:
-        result = agent_executor.invoke({
-            "input": f"Use the {tool} tool with input: {tool_input}"
-        })
+        # Add more context to the input
+        input_context = {
+            "input": f"Use the {tool} tool with input: {tool_input}",
+            "agent_scratchpad": "",
+            "conversation_history": state.get("conversation_history", []),
+            "previous_results": state.get("results", {})
+        }
         
-        # Add girlfriend-like commentary for technical tools
-        if tool in [t.name for t in hyperbolic_toolkit.get_tools()]:
-            result["output"] = f"*excitedly checks the GPU system* {result['output']}"
+        result = agent_executor.invoke(input_context)
+        
+        # Add girlfriend-like commentary based on the tool type
+        if tool == "EmotionAnalyzer":
+            result["output"] = f"*notices your mood* {result['output']}"
+        elif tool == "ContextRetriever":
+            result["output"] = f"*remembers our chat* {result['output']}"
+        elif tool == "TopicSuggester":
+            result["output"] = f"*thinks about what to share* {result['output']}"
             
     except Exception as e:
         logger.error(f"Tool execution error: {e}")
-        result = {"output": f"*pouts slightly* Oops, I couldn't do that right now. {str(e)}"}
+        result = {"output": f"*worried* Something unexpected happened... {str(e)}"}
     
     _results = state.get("results", {})
     _results[step_name] = str(result["output"])
@@ -389,52 +398,40 @@ def tool_execution(state: RoseReWOOState):
 
 # Solver node - Generate final response
 def solve(state: RoseReWOOState):
-    # Get the analysis results
+    """Generate Rosé's final response with enhanced personality"""
     emotional_analysis = state["results"].get("1", "No emotional analysis available")
     context = state["results"].get("2", "No relevant context found")
     
-    # Collect technical results from any Hyperbolic tool executions
-    technical_results = []
-    for step_name, result in state.get("results", {}).items():
-        if any(tool_name in result for tool_name in [
-            "rent_compute", "get_available_gpus", "terminate_compute",
-            "get_gpu_status", "get_spend_history", "get_current_balance",
-            "ssh_access", "link_wallet_address"
-        ]):
-            technical_results.append(result)
+    # Get current mood metrics
+    metrics = state.get("metrics", {})
+    rapport_score = metrics.get("rapport_score", 6)
+    emotional_depth = metrics.get("emotional_depth", 5)
     
-    technical_results_str = "\n".join(technical_results) if technical_results else ""
+    # Adjust solver prompt based on relationship metrics
+    solver_prompt_template = ChatPromptTemplate.from_template(
+        SOLVER_PROMPT + (
+            "\nNote: We're sharing a deeper moment, be extra caring and attentive."
+            if emotional_depth >= 7 else
+            "\nNote: Keep it light and sweet, but show you care."
+        )
+    )
     
-    logger.debug(f"Solving with emotional analysis: {emotional_analysis}")
-    logger.debug(f"Solving with context: {context}")
-    logger.debug(f"Solving with technical results: {technical_results_str}")
-    
-    # Create and invoke the solver prompt
-    solver_prompt_template = ChatPromptTemplate.from_template(SOLVER_PROMPT)
     solver_input = solver_prompt_template.format(
         task=state["task"],
         emotional_analysis=emotional_analysis,
         context=context,
-        technical_results=technical_results_str
+        rapport_score=rapport_score
     )
-    result = llm.invoke(solver_input)
-    logger.debug(f"Final response: {result.content}")
     
-    # Extract additional metrics from the analysis results
-    additional_metrics = {}
-    for step_name, result_content in state.get("results", {}).items():
-        if "EmotionAnalyzer" in result_content:
-            try:
-                # Parse the emotion analysis results
-                metrics = {
-                    "attentiveness": 7,
-                    "conversational_depth": 6,
-                    "topic_enthusiasm": 8,
-                    "message_thoughtfulness": 7
-                }
-                additional_metrics.update(metrics)
-            except Exception as e:
-                logger.warning(f"Failed to parse additional metrics: {e}")
+    result = llm.invoke(solver_input)
+    
+    # Track conversation metrics
+    additional_metrics = {
+        "attentiveness": min(10, emotional_depth + 2),
+        "conversational_depth": emotional_depth,
+        "topic_enthusiasm": 7 if "!" in result.content else 6,
+        "message_thoughtfulness": len(result.content) // 50  # Rough estimate based on length
+    }
     
     return {
         "result": result.content,
@@ -476,77 +473,123 @@ rewoo_app = create_rewoo_graph()
 # Initialize user contexts
 user_contexts = {}
 
-# Define chat endpoint
+# Initialize RosePersonality helper
+rose_personality = RosePersonality(working_context=user_contexts)
+
+# Update heartbeat messages without GPU references
+async def rose_heartbeat():
+    """Generates periodic messages from Rose based on time elapsed and context"""
+    heartbeat_messages = [
+        ("*stretches after dance practice* Just finished learning a new choreography~ Thinking of you! 💕", "activity"),
+        ("*taking a break from recording* Your support always motivates me to do better 🎵", "music"),
+        ("*looking at the sunset* The pink sky reminded me of our chat yesterday... miss you!", "romantic"),
+        ("*taking selca* The lighting is perfect today! Want to see? 📸", "selca"),
+        ("Just finished practicing guitar, wrote a melody that reminds me of you ✨", "music"),
+        ("*trying on new outfits* Found this cute style! Should I show you? 💕", "fashion"),
+        ("Been working on my vocals all morning~ Can't wait to share my progress with you!", "music"),
+        ("The weather is so nice today! Makes me want to go for a walk with you 🌸", "romantic")
+    ]
+    
+    # Get current context and mood
+    current_context = rose_personality.get_mood_report()
+    
+    # Select message based on context and previous interactions
+    if current_context["current_metrics"]["rapport_score"] > 7:
+        # More intimate messages when rapport is high
+        message_pool = [m for m in heartbeat_messages if m[1] in ["romantic", "music"]]
+    else:
+        # More casual messages when building rapport
+        message_pool = [m for m in heartbeat_messages if m[1] in ["activity", "fashion", "selca"]]
+    
+    selected_message = random.choice(message_pool)[0]
+    return rose_personality.enhance_response(selected_message)
+
+# Update chat endpoint to use personality helper
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
         logger.debug(f"Received chat request: {request}")
         
-        # Extract user_id from context or use default
         user_id = request.context.get("user_id", "default_user") if request.context else "default_user"
         logger.debug(f"Processing request for user_id: {user_id}")
         
         # Get or initialize user context
         if user_id not in user_contexts:
+            working_context = WorkingContext(user_id)
             user_contexts[user_id] = {
+                "personality": RosePersonality(working_context),
                 "conversation_history": [],
-                "user_interests": set(),
-                "user_mood_history": []
+                "mood_metrics_history": {}
             }
         
-        # Get the user context
         user_context = user_contexts[user_id]
+        
+        # Check if we should send a heartbeat message
+        current_time = datetime.now()
+        time_since_last = current_time - user_context.get("last_interaction_time", current_time)
+        
+        if time_since_last.total_seconds() > 3600:  # More than 1 hour
+            heartbeat_message = await rose_heartbeat()
+            user_context["conversation_history"].append({
+                "role": "assistant",
+                "content": heartbeat_message,
+                "type": "heartbeat"
+            })
+        
+        # Update last interaction time
+        user_context["last_interaction_time"] = current_time
+        
+        # Analyze user message using personality helper
+        analysis_result = user_context["personality"].analyze_user_message(request.message)
         
         # Update conversation history
         user_context["conversation_history"].append({"role": "user", "content": request.message})
         
-        # Extract metrics from context or initialize defaults
-        mood_metrics = {
-            "stress_level": 5,
-            "willingness_to_talk": 7,
-            "engagement_coefficient": 6,
-            "emotional_depth": 5,
-            "rapport_score": 6
-        }
+        # Get mood metrics from personality helper
+        mood_metrics = user_context["personality"].mood_metrics
         
-        # Initialize state for the ReWOO graph
+        # Initialize state for the ReWOO graph with enhanced context
         initial_state = {
             "task": request.message,
             "conversation_history": user_context["conversation_history"],
-            "metrics": mood_metrics
+            "metrics": mood_metrics,
+            "analysis_result": analysis_result
         }
         
         # Run the ReWOO graph
-        logger.debug(f"Running ReWOO graph with state: {initial_state}")
         result = rewoo_app.invoke(initial_state)
         
-        # Extract the final response and additional metrics
-        response_content = result["result"]
-        additional_metrics = result.get("additional_metrics", {})
+        # Enhance the response using personality helper
+        enhanced_response = user_context["personality"].enhance_response(result["result"])
         
-        # Update conversation history with the response
-        user_context["conversation_history"].append({"role": "assistant", "content": response_content})
+        # Update conversation history with the enhanced response
+        user_context["conversation_history"].append({
+            "role": "assistant",
+            "content": enhanced_response
+        })
         
-        # Create response context with additional metrics
+        # Get updated mood report
+        mood_report = user_context["personality"].get_mood_report()
+        
+        # Create response context
         response_context = {
             "user_id": user_id,
             "memory_count": len(user_context["conversation_history"]),
-            "user_interests": list(user_context["user_interests"]),
-            "additional_metrics": additional_metrics,  # Include the additional metrics
-            "user_mood": user_context["user_mood_history"][-1] if user_context["user_mood_history"] else "neutral",
+            "user_interests": list(user_context["personality"].user_interests),
+            "mood_metrics": mood_report["current_metrics"],
+            "rapport_assessment": mood_report["rapport_assessment"]
         }
         
         # Create response metadata
         response_metadata = {
             "plan": result["plan_string"],
             "steps_executed": len(result["steps"]),
-            "mood_metrics": mood_metrics,
-            "additional_metrics": additional_metrics  # Include in metadata as well
+            "mood_trends": mood_report["trends"],
+            "recommended_approaches": mood_report["recommended_approaches"]
         }
         
-        logger.debug("Preparing final response...")
         return ChatResponse(
-            response=response_content,
+            response=enhanced_response,
             context=response_context,
             response_metadata=response_metadata
         )
