@@ -9,11 +9,26 @@ import { VaultTable } from "@/components/vault-table"
 import { BarChart3, Briefcase, ChevronDown, Flower, Globe, Home, LayoutDashboard, LifeBuoy, Settings, Wallet } from "lucide-react"
 import { useState } from "react"
 import { motion } from "framer-motion"
-import HeartParticles from "@/components/ui/heart-particles"
-import HyperText from "@/components/ui/hyper-text"
+import dynamic from "next/dynamic"
 
+const HeartParticles = dynamic(
+    () => import('@/components/ui/heart-particles'),
+    { ssr: false }
+  );
+const HyperText = dynamic(
+    () => import('@/components/ui/hyper-text'),
+    { ssr: false }
+  );
+  
 export default function Page() {
-  const [mode, setMode] = useState<'fun' | 'serious'>('serious')
+  const [mode, setMode] = useState<'fun' | 'serious'>('fun')
+  const [baseAmount] = useState(1000) // Example base amount
+  const [yieldRate] = useState(0.425) // 42.5% yield rate
+  
+  // Calculate accrued yield
+  const accruedYield = baseAmount * yieldRate
+  const totalAmount = baseAmount + accruedYield
+  const formattedYield = `$${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
@@ -61,15 +76,15 @@ export default function Page() {
         <div className="grid gap-4 md:grid-cols-2">
           <MetricsCard
             title={mode === 'fun' ? 'Love Credits' : 'Your Balance'}
-            value="$74,892"
-            change={{ value: "$1,340", percentage: "-2.1%", isPositive: false }}
+            value="$1,425.00"
+            change={{ value: "$303.53", percentage: "21.3%", isPositive: true }}
             mode={mode}
             onModeChange={setMode}
           />
           <MetricsCard
             title={mode === 'fun' ? 'GF Sweetness' : 'Accrued Yield'}
-            value="$20,892"
-            change={{ value: "$1,340", percentage: "+1.2%", isPositive: true }}
+            value={formattedYield}
+            change={{ value: `$${accruedYield.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, percentage: "42.5%", isPositive: true }}
             mode={mode}
             onModeChange={setMode}
           />
