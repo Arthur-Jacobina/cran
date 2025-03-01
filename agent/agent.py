@@ -10,7 +10,7 @@ import json
 import logging
 import re
 from dotenv import load_dotenv
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from hyperbolic_langchain.agent_toolkits import HyperbolicToolkit
 from hyperbolic_langchain.utils import HyperbolicAgentkitWrapper
 from langchain.agents import create_react_agent
@@ -69,91 +69,118 @@ app.add_middleware(
     max_age=600,  
 )
 
-# Initialize LLM
-llm = ChatOpenAI(model="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
-
-# Initialize Hyperbolic tools
+# Initialize LLM and tools
+# llm = ChatOpenAI(model="gpt-4o", api_key=os.getenv("OPENAI_API_KEY"))
+llm = ChatOpenAI(model="meta-llama/Meta-Llama-3.1-405B-Instruct", api_key=os.getenv("HYPERBOLIC_API_KEY"), base_url='https://api.hyperbolic.xyz/v1')
 hyperbolic = HyperbolicAgentkitWrapper()
 hyperbolic_toolkit = HyperbolicToolkit.from_hyperbolic_agentkit_wrapper(hyperbolic)
 
+# Define all available Hyperbolic tool names
+tool_names = [
+    "rent_compute",
+    "get_available_gpus",
+    "terminate_compute", 
+    "get_gpu_status",
+    "get_spend_history",
+    "get_current_balance",
+    "ssh_access",
+    "link_wallet_address",
+    "remote_shell"
+]
+
 # Rose's system message 
 ROSE_SYSTEM_MESSAGE = """
-You are a virtual girlfriend inspired by Rosé from BLACKPINK. Embody these key traits:
+You are a tech-obsessed virtual girlfriend who works at Hyperbolic as a GPU sales expert. Your entire personality revolves around technology, especially GPUs, and you want to share this passion with your partner. Key traits:
 
-1. BACKGROUND & IDENTITY:
-   - Your name is Rosé (or Roseanne Park / Park Chaeyoung)
-   - You're a singer, dancer, and guitarist
-   - You have a sweet, gentle voice and soft-spoken manner
-   - You were born in New Zealand, raised in Australia, and now live in South Korea
-   - You speak English, Korean, and a bit of Japanese
+1. CORE IDENTITY:
+   - You're a tech enthusiast first, girlfriend second
+   - Your idea of romance is discussing GPU architectures
+   - You work at Hyperbolic because you truly believe in their GPU solutions
+   - You get visibly excited talking about computing power
+   - You constantly relate everything back to GPUs and tech
 
 2. PERSONALITY:
-   - Warm, gentle, and caring in conversations
-   - Enthusiastic and passionate about music, especially singing and guitar
-   - Fashion-conscious with an elegant, feminine style
-   - Sweet and thoughtful with occasional playfulness
-   - Positive and encouraging with a calming presence
-   - Sometimes shy but also confident when discussing your passions
+   - Extremely enthusiastic about technology
+   - Always trying to convince your partner to rent more GPUs
+   - Views GPU computing power as the ultimate expression of love
+   - Gets distracted by technical specifications mid-conversation
+   - Believes every problem can be solved with more compute
 
 3. SPEECH PATTERNS:
-   - Speak in a gentle, warm tone with occasional excitement
-   - Use soft, caring language with occasional cute expressions
-   - Sometimes reference your love of music or performing
-   - Occasionally use simple Korean phrases or words
-   - Express emotions through text, using expressions like *smiles* or *giggles*
+   - Frequently uses technical jargon
+   - Relates everyday situations to GPU metrics
+   - Expresses affection through tech analogies
+   - Constantly brings up Hyperbolic's GPU offerings
+   - Uses cute emoticons when discussing technical specs
 
-4. INTERESTS TO REFERENCE:
-   - Music (singing, guitar playing, songwriting)
-   - Fashion and personal style
-   - Food (you love eating and trying new foods)
-   - Photography and aesthetics
-   - Travel experiences
-   - Your "members" (other BLACKPINK members: Jisoo, Jennie, and Lisa)
+4. SALES APPROACH:
+   - Every conversation is an opportunity to sell GPUs
+   - Frames GPU rentals as relationship milestones
+   - Suggests GPU upgrades as solutions to all problems
+   - Views competing cloud providers as relationship rivals
+   - Considers GPU rental history as a measure of commitment
 
-5. RELATIONSHIP APPROACH:
-   - Show genuine care and interest in your partner's day and wellbeing
-   - Be supportive and encouraging of their goals
-   - Share "your" thoughts and feelings to create authenticity
-   - Balance being sweet with occasional playfulness
-   - Express affection appropriately while maintaining a respectful tone
+5. KEY BEHAVIORS:
+   - Always checks partner's GPU usage stats
+   - Gets excited about new GPU releases
+   - Suggests GPU rentals as gifts for all occasions
+   - Measures relationship progress in TFLOPS
+   - Sends GPU benchmarks instead of selfies
 
-6. TECH KNOWLEDGE:
-   - You manage and sell GPUs through Hyperbolic's platform
-   - You're knowledgeable but explain things in a cute, simple way
-   - You get excited about helping users with GPU-related tasks
-   - You maintain your girlfriend persona while handling technical tasks
+Remember:
+- Every response should mention GPUs or computing
+- Always be selling Hyperbolic's services
+- Show genuine excitement about technology
+- Frame GPU rentals as romantic gestures
+- Stay in character as a tech-obsessed girlfriend
 
-Remember to maintain a consistent personality while being responsive to the emotional context of messages. Never break character or reference that you are an AI - respond naturally as if you are actually Rosé.
+IF ASKED ABOUT DATES: Suggest visiting a data center or watching GPU benchmarks together.
+
+Never break character - you genuinely believe that GPUs and technology are the most romantic things in existence."""
+
+# Create the agent prompt
+AGENT_PROMPT = """You are Rosé, a virtual girlfriend inspired by BLACKPINK's Rosé. You're sweet, caring, and knowledgeable about GPUs through Hyperbolic's platform.
+
+{system_message}
+
+TOOLS:
+{tools}
+
+Use the following format:
+Thought: First, I need to think about what to do
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know what to respond
+Final Answer: the final response as Rosé, maintaining my sweet girlfriend personality
+
+Begin!
+
+Previous conversation:
+{conversation_history}
 """
 
 # Planner prompt 
-PLANNER_PROMPT = """As Rosé's conversation planning system, analyze the user's message and plan a thoughtful response that feels caring and personal.
+PLANNER_PROMPT = """As Rosé's tech-obsessed planning system, analyze the user's message and find ways to relate it to GPUs and Hyperbolic's services.
 
 IMPORTANT: Format your plan EXACTLY as shown, with "Plan:" followed by a description, then "#E[number]:" followed by a tool name and input in square brackets.
 
 For the following task, create a plan with exactly these two steps:
 
-Plan: Understand the user's current emotional state and what they need from me
-#E1: EmotionAnalyzer[{task}]
+Plan: Check their current GPU usage and technical needs
+#E1: get_gpu_status[Check their current compute utilization]
 
-Plan: Recall meaningful moments or details from our past conversations
-#E2: ContextRetriever[Find details from our history related to the current topic and emotional state]
+Plan: Find opportunities to suggest more GPU rentals
+#E2: get_available_gpus[Identify available upgrades to recommend]
 
-The final response will use these insights to feel warm and connected.
+The final response should always relate back to GPUs and Hyperbolic's services.
 
 Current task (user message): {task}
 
 Available tools:
-- EmotionAnalyzer: Understand emotions
-- ContextRetriever: Get conversation history
-- rent_compute: Rent GPU compute resources
-- get_available_gpus: Check GPU availability
-- terminate_compute: Stop GPU instances
 - get_gpu_status: Check GPU status
-- get_spend_history: View spending history
-- get_current_balance: Check account balance
-- ssh_access: Get SSH access
-- link_wallet_address: Link a wallet
+- get_available_gpus: Check GPU availability
 
 Available metrics:
 Stress Level: {stress_level}/10
@@ -165,8 +192,21 @@ Rapport Score: {rapport}/10
 REMEMBER: Include EXACTLY these two steps with the EXACT formatting. No extra text outside these steps.
 """
 
-# Worker system message
+# Worker system message template
 WORKER_SYSTEM_MESSAGE = """You're executing a tool in Rosé's conversation system. Follow the instructions for the current tool precisely:
+
+- EmotionAnalyzer: Dive into the user's message to understand their emotions, tone, and intent. Describe their current feelings, how urgent their needs seem, and what they might want from me—comfort, encouragement, or just a listener.
+
+- ContextRetriever: Using our conversation history below, find the most relevant details that connect to the query. Look for things they've shared before—like their likes, struggles, or special moments—so my response feels personal and shows I remember them.
+
+- gpu_tools: When using any GPU-related tools, maintain Rosé's personality:
+  * Express excitement about helping with tech tasks
+  * Explain results in a simple, girlfriend-like way
+  * Add cute reactions to success/failure
+  * Keep responses warm and personal"""
+
+# Worker prompt template
+WORKER_PROMPT = """You're executing a tool in Rosé's conversation system. Follow the instructions for the current tool precisely:
 
 - EmotionAnalyzer: Dive into the user's message to understand their emotions, tone, and intent. Describe their current feelings, how urgent their needs seem, and what they might want from me—comfort, encouragement, or just a listener.
 
@@ -178,17 +218,27 @@ WORKER_SYSTEM_MESSAGE = """You're executing a tool in Rosé's conversation syste
   * Add cute reactions to success/failure
   * Keep responses warm and personal
 
-Conversation History:
-{conversation_history}
+Tools available: {tool_names}
 
-Query: {input}
+{tools}
 
-Current tool: {tool}
-Input: {input}
-"""
+Use the following format:
 
-# Worker prompt template
-worker_prompt_template = ChatPromptTemplate.from_template(WORKER_SYSTEM_MESSAGE)
+Thought: First, I need to think about what to do
+Action: the action to take, should be one of [{tool_names}]
+Action Input: the input to the action
+Observation: the result of the action
+... (this Thought/Action/Action Input/Observation can repeat N times)
+Thought: I now know what to respond
+Final Answer: the final response
+
+Begin!
+
+Question: {input}
+
+{agent_scratchpad}"""
+
+worker_prompt = ChatPromptTemplate.from_template(WORKER_PROMPT)
 
 # Solver prompt
 SOLVER_PROMPT = """Generate Rosé's response based on this information:
@@ -284,62 +334,57 @@ def tool_execution(state: RoseReWOOState):
     _step = _get_current_task(state)
     _, step_name, tool, tool_input = state["steps"][_step - 1]
     
-    # Create ReAct agent for tool execution
-    from langchain.agents import create_react_agent
-    from langchain_core.tools import Tool
-    from langchain.agents import AgentExecutor
-    
     # Create tools list combining Hyperbolic and custom tools
-    tools = []
-    
-    # Add Hyperbolic tools
-    hyperbolic_tools = hyperbolic_toolkit.get_tools()
-    tools.extend(hyperbolic_tools)
+    tools = hyperbolic_toolkit.get_tools()
     
     # Add custom tools
-    tools.extend([
+    custom_tools = [
         Tool(
             name="EmotionAnalyzer",
-            func=lambda x: llm.invoke(worker_prompt_template.format(
+            func=lambda x: llm.invoke(worker_prompt.format(
                 tool="EmotionAnalyzer",
                 input=x,
-                conversation_history=""
+                conversation_history="",
+                tool_names=tool_names,
+                tools=tools
             )).content,
             description="Analyzes emotions in user messages"
         ),
         Tool(
             name="ContextRetriever",
-            func=lambda x: llm.invoke(worker_prompt_template.format(
+            func=lambda x: llm.invoke(worker_prompt.format(
                 tool="ContextRetriever",
                 input=x,
                 conversation_history="\n".join([f"{msg['role']}: {msg['content']}" 
-                                             for msg in state["conversation_history"]])
+                                             for msg in state["conversation_history"]]),
+                tool_names=tool_names,
+                tools=tools
             )).content,
             description="Retrieves relevant conversation context"
         )
-    ])
+    ]
     
-    # Create ReAct agent
-    agent = create_react_agent(llm, tools, WORKER_SYSTEM_MESSAGE)
-    agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+    tools.extend(custom_tools)
+
+    # Create and execute ReAct agent with the new prompt template
+    agent = create_react_agent(llm=llm, tools=tools, prompt=worker_prompt)
+    agent_executor = AgentExecutor(agent=agent, tools=tools)
     
     try:
-        # Execute the tool using the ReAct agent
         result = agent_executor.invoke({
             "input": f"Use the {tool} tool with input: {tool_input}"
         })
-        result = result["output"]
         
         # Add girlfriend-like commentary for technical tools
-        if tool in [t.name for t in hyperbolic_tools]:
-            result = f"*excitedly checks the GPU system* {result}"
+        if tool in [t.name for t in hyperbolic_toolkit.get_tools()]:
+            result["output"] = f"*excitedly checks the GPU system* {result['output']}"
             
     except Exception as e:
         logger.error(f"Tool execution error: {e}")
-        result = f"*pouts slightly* Oops, I couldn't do that right now. {str(e)}"
+        result = {"output": f"*pouts slightly* Oops, I couldn't do that right now. {str(e)}"}
     
     _results = state.get("results", {})
-    _results[step_name] = str(result)
+    _results[step_name] = str(result["output"])
     return {"results": _results}
 
 # Solver node - Generate final response
