@@ -18,6 +18,7 @@ import dynamic from 'next/dynamic';
 import { extractCleanMessage, formatSystemLogs, extractReasoningSteps } from '@/utils/message-parser';
 import ReactMarkdown from 'react-markdown';
 import Image from 'next/image'; // Using Next.js Image component for better handling
+import { StatsChart } from '@/components/stats-chart';
 
 // Import HeartParticles with SSR disabled
 const HeartParticles = dynamic(
@@ -704,6 +705,7 @@ export default function Chat() {
               </CardContent>
             </Card>
           </div>
+          <div className="flex flex-col gap-4 w-full max-w-md">
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle>User Metrics</CardTitle>
@@ -758,6 +760,32 @@ export default function Chat() {
               </Button>
             </CardFooter>
           </Card>
+          <Card className="w-full max-w-md mt-4">
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <span>Vault Performance</span>
+                <Button variant="link" className="text-blue-500" asChild>
+                  <a href="/trading">View Details →</a>
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-2xl font-bold text-green-500">+21.3%</p>
+                    <p className="text-sm text-gray-500">7d Return</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">$1425</p>
+                    <p className="text-sm text-gray-500">Total Value</p>
+                  </div>
+                </div>
+                <StatsChart />
+              </div>
+            </CardContent>
+          </Card>
+          </div>
         </div>
       </div>
     </div>
