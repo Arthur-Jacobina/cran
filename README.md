@@ -37,4 +37,4 @@ Cranberry or Cran is here to be your AI girlfriend.
 - Base Sepolia Tesnet: https://base-sepolia.blockscout.com/tx/0xfe0bcc4fa11416fa8e05f47b6ee19c057be2958e477b182dff863cf9a48cbae0
 - FlowEVM Testnet: https://evm-testnet.flowscan.io/tx/0xa2e908d8994292a4b9365918f42913f53f0e68d4b748cad5df9799061a11bd7c
 - Zircuit Testnet: [https://explorer.testnet.zircuit.com/tx/0x09c3a6595bacfc71a445dc846ac35052e2ec3dd8ccdd458e491a8b94198e2fb7](https://explorer.testnet.zircuit.com/tx/0x550981af511340685cd2d0a58291267f9ddc67026063d6c72d61e232e41ddcb5)
-- 
+- Somnia Testnet: https://somnia-devnet.socialscan.io/tx/0x9492c09b3316572a6636aecaf06a44ddef52dbaed0241cd4bac976344f701bef
