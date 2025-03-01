@@ -17,6 +17,8 @@ import { AudioVisualizer } from '@/components/AudioVisualizer';
 import dynamic from 'next/dynamic';
 import { extractCleanMessage, formatSystemLogs, extractReasoningSteps } from '@/utils/message-parser';
 import ReactMarkdown from 'react-markdown';
+import Image from 'next/image'; // Using Next.js Image component for better handling
+import { StatsChart } from '@/components/stats-chart';
 
 // Import HeartParticles with SSR disabled
 const HeartParticles = dynamic(
@@ -59,11 +61,15 @@ const FlipCard = ({ imageUrl, alt, prompt }: FlipCardProps) => {
             transition={{ duration: 0.3 }}
             style={{ backfaceVisibility: 'hidden' }}
           >
-            <img
-              src={imageUrl}
-              alt={alt}
-              className="w-full h-full object-cover rounded-lg"
-            />
+            <div className="relative w-full h-full">
+              <Image
+                src={imageUrl}
+                alt={alt}
+                fill
+                style={{ objectFit: 'cover' }}
+                className="rounded-lg"
+              />
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -203,6 +209,28 @@ async function sendMessage(message: string, previousContext?: ChatContext) {
   }
 }
 
+async function generateAudioResponse(text: string) {
+  try {
+    const response = await fetch('/api/audio', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate audio');
+    }
+
+    const audioBlob = await response.blob();
+    return URL.createObjectURL(audioBlob);
+  } catch (error) {
+    console.error('Error generating audio:', error);
+    return null;
+  }
+}
+
 export default function Chat() {
   const [isTyping, setIsTyping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -223,10 +251,10 @@ export default function Chat() {
   }>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [memoryLog, setMemoryLog] = useState(
-    "Last conversation: Discussed anime recommendations\nCore memory: Loves Sousou no Frieren\nRecent context: Technical discussion about React"
+    "Context Logs for the current conversation"
   );
   const [executionFlow, setExecutionFlow] = useState(
-    "→ Processing user input → Accessing memory context → Generating response → Updating conversation history"
+    "Execution Flow for the current conversation"
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -278,12 +306,12 @@ export default function Chat() {
 
     let audioUrl = null;
 
-    // Get audio URL if recording
-    if (isRecording && audioRecorderRef.current) {
+    // Get audio URL if recording and voice mode is enabled
+    if (voiceMode && isRecording && audioRecorderRef.current) {
       audioUrl = audioRecorderRef.current.getAudioUrl();
       audioRecorderRef.current.stopAndReset();
       setIsRecording(false);
-    } else if (recordedAudioUrl) {
+    } else if (voiceMode && recordedAudioUrl) {
       audioUrl = recordedAudioUrl;
     }
 
@@ -300,7 +328,7 @@ export default function Chat() {
       createdAt: new Date(),
     };
 
-    if (audioUrl) {
+    if (audioUrl && voiceMode) {
       userMessage.audio = audioUrl;
     }
 
@@ -315,11 +343,15 @@ export default function Chat() {
     }, 0);
     
     setIsLoading(true);
-    console.log(messages);
 
     try {
       const { response: aiResponse, context, metadata } = await sendMessage(userMessage.content, previousContext);
       
+      // Generate audio if voice mode is enabled
+      if (voiceMode) {
+        audioUrl = await generateAudioResponse(aiResponse);
+      }
+
       // Update all metrics from both context and metadata
       const newMetrics = {
         ...metrics,
@@ -329,14 +361,17 @@ export default function Chat() {
       setMetrics(newMetrics);
 
       // Create AI response message
+      const cleanMessage = extractCleanMessage(aiResponse);
       const assistantMessage: Message = {
         id: Date.now().toString(),
         role: "assistant",
-        content: aiResponse,
+        content: cleanMessage,
         rawContent: aiResponse,
+        cleanContent: cleanMessage,
         createdAt: new Date(),
         context: context,
-        metadata: metadata
+        metadata: metadata,
+        audio: audioUrl || undefined
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -401,29 +436,28 @@ export default function Chat() {
 
   const gf_name = 'Cranberry';
   const gf_description =
-    'A cute and friendly AI girlfriend, who is a bit of a nerd and loves to talk about anime and manga.';
+    'A sweet and caring AI girlfriend inspired by BLACKPINK\'s Rosé. She\'s passionate about tech and GPUs, with a playful personality that mixes Korean aegyo with technical expertise. She loves discussing performance metrics as much as she enjoys sending virtual selcas and sharing her thoughts on the latest benchmarks.';
 
   const galleryCards = [
     {
-      imageUrl: imageUrl,
+      imageUrl: '/3.jpg',  
       alt: 'Gallery 1',
       prompt:
         'A stunning digital artwork of an anime-style character with vibrant cranberry-colored hair, wearing casual tech company attire, sitting in a modern office environment surrounded by multiple computer screens displaying code.',
     },
     {
-      imageUrl: imageUrl,
+      imageUrl: '/2.jpg',  
       alt: 'Gallery 2',
       prompt:
         'An illustration of a cheerful anime girl in a cozy room, surrounded by manga volumes and programming books, with a soft evening light streaming through the window.',
     },
     {
-      imageUrl: imageUrl,
+      imageUrl: '/1.png',  
       alt: 'Gallery 3',
       prompt:
         'A detailed portrait of an anime-style software engineer with distinctive cranberry hair, wearing smart casual clothes, holding a coffee mug with coding stickers, against a background of cherry blossoms.',
     },
   ];
-  console.log(messages);
 
   function processMessageContent(message: Message) {
     if (!message) return '';
@@ -454,50 +488,23 @@ export default function Chat() {
       <HeartParticles />
       <div className="container z-10 px-4 mx-auto">
         <div className="flex flex-col lg:flex-row gap-4 justify-center items-start">
-          <Card className="w-full max-w-2xl">
-            <CardHeader className="flex flex-row items-center gap-4">
+          <Card className="w-full max-w-2xl flex flex-col h-[650px]">
+            <CardHeader className="flex flex-row items-center gap-4 flex-shrink-0">
               <div
-                className="w-12 h-12 rounded-full overflow-hidden cursor-pointer"
+                className="w-12 h-12 rounded-full overflow-hidden cursor-pointer relative"
                 onClick={() => setIsOverlayOpen(true)}
               >
-                <img
-                  src={imageUrl}
+                <Image
+                  src="/1.png" 
                   alt={`${gf_name}'s avatar`}
-                  className="w-full h-full object-cover"
+                  fill
+                  style={{ objectFit: 'cover' }}
                 />
               </div>
-              <CardTitle>{gf_name}</CardTitle>
+              <CardTitle className="text-blue-800">{gf_name}</CardTitle>
             </CardHeader>
 
-            <AnimatePresence>
-              {isOverlayOpen && (
-                <motion.div
-                  className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center"
-                  onClick={() => setIsOverlayOpen(false)}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <motion.div
-                    className="relative max-w-xl w-full m-4 bg-white rounded-lg shadow-2xl overflow-hidden"
-                    onClick={(e) => e.stopPropagation()}
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={`${gf_name}'s avatar`}
-                      className="w-full h-full object-contain rounded-lg"
-                    />
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <CardContent className="h-[60vh] overflow-y-auto space-y-3 flex flex-col message-container">
+            <CardContent className="flex-1 overflow-y-auto space-y-2 message-container">
               {getProcessedMessages().map((message, index) => (
                 <div
                   key={index}
@@ -544,7 +551,8 @@ export default function Chat() {
               ))}
               <div ref={messagesEndRef} />
             </CardContent>
-            <CardFooter>
+
+            <CardFooter className="flex-shrink-0 border-t">
               <form onSubmit={onSubmit} className="flex w-full space-x-2">
                 {!isRecording ? (
                   <Input
@@ -665,16 +673,8 @@ export default function Chat() {
             </Card>
 
             <Card className="w-full">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle>System Logs</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={handleDeveloperMode}
-                  className="h-6 text-xs opacity-50 hover:opacity-100"
-                >
-                  Debug
-                </Button>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -701,38 +701,90 @@ export default function Chat() {
                       </pre>
                     </div>
                   </div>
-                  
-                  {/* Add the metrics section */}
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
-                      <span>📊</span>
-                      <span>User Metrics</span>
-                    </h2>
-                    <div className="grid grid-cols-2 gap-2">
-                      {Object.entries(metrics).map(([key, value]) => (
-                        <div key={key} className="flex flex-col">
-                          <span className="text-xs text-gray-500 capitalize">
-                            {key.replace(/_/g, ' ')}
-                          </span>
-                          <div className="w-full bg-gray-200 rounded-full h-1.5">
-                            <div 
-                              className="bg-blue-500 h-1.5 rounded-full" 
-                              style={{ width: `${(Number(value) / 10) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-row justify-center gap-2">
-                    <button className={`text-gray-500 rounded-full px-4 py-2 ${nsfwMode ? 'border border-gray-200' : 'border border-gray-200'} disabled disabled:opacity-50`} onClick={() => setNsfwMode(!nsfwMode)}>
-                        +18 (soon)
-                    </button>
-                  </div>
                 </div>
               </CardContent>
             </Card>
+          </div>
+          <div className="flex flex-col gap-4 w-full max-w-md">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>User Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(metrics).map(([key, value]) => (
+                  <div key={key} className="flex flex-col">
+                    <span className="text-xs text-gray-500 capitalize">
+                      {key.replace(/_/g, ' ')}
+                    </span>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div 
+                        className="bg-blue-500 h-1.5 rounded-full" 
+                        style={{ width: `${(Number(value) / 10) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+            <CardFooter className="flex gap-2">
+              <Button
+                onClick={() => setVoiceMode(!voiceMode)}
+                className={`text-sm ${
+                  voiceMode
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                    : 'bg-gray-100 text-gray-400 border border-gray-400 hover:bg-blue-100'
+                }`}
+              >
+                Voice Mode
+              </Button>
+              <Button
+                onClick={() => setNsfwMode(!nsfwMode)}
+                className={`text-sm ${
+                  nsfwMode
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                    : 'bg-gray-100 text-gray-400 border border-gray-400 hover:bg-blue-100'
+                }`}
+              >
+                NSFW
+              </Button>
+              <Button
+                onClick={() => setPrivateMode(!privateMode)}
+                className={`text-sm ${
+                  privateMode
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                    : 'bg-gray-100 text-gray-400 border border-gray-400 hover:bg-blue-100'
+                }`}
+              >
+                 Private Mode
+              </Button>
+            </CardFooter>
+          </Card>
+          <Card className="w-full max-w-md mt-4">
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <span>Vault Performance</span>
+                <Button variant="link" className="text-blue-500" asChild>
+                  <a href="/trading">View Details →</a>
+                </Button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-2xl font-bold text-green-500">+21.3%</p>
+                    <p className="text-sm text-gray-500">7d Return</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">$1425</p>
+                    <p className="text-sm text-gray-500">Total Value</p>
+                  </div>
+                </div>
+                <StatsChart />
+              </div>
+            </CardContent>
+          </Card>
           </div>
         </div>
       </div>

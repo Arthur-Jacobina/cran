@@ -25,9 +25,12 @@ export default function Home() {
   const [roleText, setRoleText] = useState('');
   const roles = [
     'Girlfriend',
-    'Mommy',
-    'Crypto Buddie',
-    '(not so)Professional Trader',
+    'GPU Enthusiast',
+    'Hyperbolic Dealer',
+    'Crypto memeologist',
+    '(Not so)Professional Trader',
+    'Sometimes a singer',
+    'Onchain personal stylist',
   ];
   const [currentRoleIndex, setCurrentRoleIndex] = useState(0);
 
@@ -91,7 +94,7 @@ export default function Home() {
                   <div className="absolute inset-0 rounded-2xl bg-gray-200 animate-pulse" />
                 ) : (
                   <Image
-                    src={imageUrl}
+                    src="/4.jpeg"
                     alt="Cran AI Avatar"
                     className="absolute inset-0 rounded-2xl shadow-xl object-cover w-full h-[80%]"
                     fill
