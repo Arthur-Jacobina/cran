@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { AudioRecorder } from '@/components/AudioRecorder';
-import { SendIcon, TrashIcon } from 'lucide-react';
+import { SendIcon, TrashIcon, TrendingUpIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AudioVisualizer } from '@/components/AudioVisualizer';
 import dynamic from 'next/dynamic';
@@ -257,6 +257,7 @@ export default function Chat() {
     "Execution Flow for the current conversation"
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [tradingMode, setTradingMode] = useState(false);
 
   // Replace the current metrics state with a more generic one
   const [metrics, setMetrics] = useState<Metrics>({
@@ -489,19 +490,33 @@ export default function Chat() {
       <div className="container z-10 px-4 mx-auto">
         <div className="flex flex-col lg:flex-row gap-4 justify-center items-start">
           <Card className="w-full max-w-2xl flex flex-col h-[650px]">
-            <CardHeader className="flex flex-row items-center gap-4 flex-shrink-0">
-              <div
-                className="w-12 h-12 rounded-full overflow-hidden cursor-pointer relative"
-                onClick={() => setIsOverlayOpen(true)}
-              >
-                <Image
-                  src="/1.png" 
-                  alt={`${gf_name}'s avatar`}
-                  fill
-                  style={{ objectFit: 'cover' }}
-                />
+            <CardHeader className="flex flex-row items-center gap-4 flex-shrink-0 justify-between">
+              <div className="flex items-center gap-4">
+                <div
+                  className="w-12 h-12 rounded-full overflow-hidden cursor-pointer relative"
+                  onClick={() => setIsOverlayOpen(true)}
+                >
+                  <Image
+                    src="/1.png" 
+                    alt={`${gf_name}'s avatar`}
+                    fill
+                    style={{ objectFit: 'cover' }}
+                  />
+                </div>
+                <CardTitle className="text-blue-800">{gf_name}</CardTitle>
               </div>
-              <CardTitle className="text-blue-800">{gf_name}</CardTitle>
+              
+              <Button
+                onClick={() => setTradingMode(!tradingMode)}
+                className={`flex items-center gap-1 text-sm ${
+                  tradingMode
+                    ? 'bg-blue-500 text-white hover:bg-blue-600'
+                    : 'bg-gray-100 text-gray-400 border border-gray-400 hover:bg-blue-100'
+                }`}
+              >
+                <TrendingUpIcon className="w-4 h-4" />
+                <span>Trade</span>
+              </Button>
             </CardHeader>
 
             <CardContent className="flex-1 overflow-y-auto space-y-2 message-container">
@@ -553,12 +568,12 @@ export default function Chat() {
             </CardContent>
 
             <CardFooter className="flex-shrink-0 border-t">
-              <form onSubmit={onSubmit} className="flex w-full space-x-2">
+              <form onSubmit={onSubmit} className="mt-4 flex w-full space-x-2">
                 {!isRecording ? (
                   <Input
                     value={input}
                     onChange={handleInputChange}
-                    placeholder={isLoading ? "Thinking..." : "Type your message..."}
+                    placeholder={isLoading ? "Thinking..." : tradingMode ? "Enter your trading command..." : "Type your message..."}
                     disabled={isLoading}
                     className="flex-grow rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
@@ -705,7 +720,7 @@ export default function Chat() {
               </CardContent>
             </Card>
           </div>
-          <div className="flex flex-col gap-4 w-full max-w-md">
+          <div className="flex flex-col w-full max-w-md">
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle>User Metrics</CardTitle>
@@ -760,31 +775,33 @@ export default function Chat() {
               </Button>
             </CardFooter>
           </Card>
-          <Card className="w-full max-w-md mt-4">
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>Vault Performance</span>
-                <Button variant="link" className="text-blue-500" asChild>
-                  <a href="/trading">View Details →</a>
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-2xl font-bold text-green-500">+21.3%</p>
-                    <p className="text-sm text-gray-500">7d Return</p>
+          {tradingMode && (
+            <Card className="w-full max-w-md mt-4">
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  <span>Vault Performance</span>
+                  <Button variant="link" className="text-blue-500" asChild>
+                    <a href="/trading">View Details →</a>
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-2xl font-bold text-green-500">+21.3%</p>
+                      <p className="text-sm text-gray-500">7d Return</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">$1425</p>
+                      <p className="text-sm text-gray-500">Total Value</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">$1425</p>
-                    <p className="text-sm text-gray-500">Total Value</p>
-                  </div>
+                  <StatsChart />
                 </div>
-                <StatsChart />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
           </div>
         </div>
       </div>
