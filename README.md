@@ -4,12 +4,13 @@ Cranberry or Cran is here to be your AI girlfriend.
 
 ## Features planned
 
-- [ ] Chat mode
-- [ ] Custom memory
-- [ ] Pre-set personality
+- [ x ] Chat mode
+- [ x ] Custom memory
+- [ x ] Pre-set personality
 - [ ] Voice mode
 - [ ] Video mode
-- [ ] Private memory 
+- [ x ] Private memory
+- [ x ] Sell GPUs
 
 ## Tech in a short
 
