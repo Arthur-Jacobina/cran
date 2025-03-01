@@ -81,7 +81,7 @@ export default function RootLayout({
         <meta name="description" content="Cranberry is your AI Girlfriend" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-100 h-screen overflow-y-hidden`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-100 h-screen overflow-y-auto`}
       >
         <WagmiProvider config={config}>
           <QueryClientProvider client={queryClient}>

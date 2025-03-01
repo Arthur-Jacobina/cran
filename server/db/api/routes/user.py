@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+from sqlalchemy import text
 
 from ...crud import user as user_crud
 from ...app import get_db
@@ -32,13 +33,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.get("/{address}", response_model=UserResponse)
 def read_user(address: str, db: Session = Depends(get_db)):
     try:
-        # Normalize the address to lowercase or checksum format if needed
-        normalized_address = address.lower()  # or Web3.toChecksumAddress(address)
-        
-        # Add debug logging
-        print(f"Looking up user with address: {normalized_address}")
-        
-        db_user = user_crud.get_user(db, normalized_address)
+        db_user = user_crud.get_user(db, address)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
         return db_user
@@ -69,4 +64,14 @@ def delete_user(address: str, db: Session = Depends(get_db)):
     success = user_crud.delete_user(db, address)
     if not success:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"message": "User deleted successfully"} 
+    return {"message": "User deleted successfully"}
+
+@router.get("/all")
+def get_all_users(db: Session = Depends(get_db)):
+    try:
+        # Using raw SQL for direct table view
+        result = db.execute(text("SELECT * FROM users"))
+        users = [dict(row._mapping) for row in result]
+        return {"status": "success", "users": users}
+    except Exception as e:
+        return {"status": "error", "message": str(e)} 

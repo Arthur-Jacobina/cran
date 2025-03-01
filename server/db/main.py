@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from db.api.routes import agent, user, room, message
 from db.app import get_db
-
+import uvicorn
 app = FastAPI(title="Chat API", version="1.0.0", root_path="/api/v1")
 
 # Add CORS middleware
@@ -34,3 +34,6 @@ def test_db_connection(db: Session = Depends(get_db)):
         return {"status": "connected", "test_query": result}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

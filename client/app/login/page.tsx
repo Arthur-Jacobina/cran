@@ -61,7 +61,7 @@ export default function Login() {
 
   const checkUserRegistration = async () => {
     try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/${address}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${address}`);
         const data = await response.json();
         console.log(data);
         if (response.status === 404 || response.status === 500) {

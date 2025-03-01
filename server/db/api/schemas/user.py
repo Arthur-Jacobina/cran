@@ -29,8 +29,6 @@ class UserCreate(UserBase):
 
 class UserUpdate(UserBase):
     username: Optional[str] = None
-    password: Optional[str] = None
-    is_active: Optional[bool] = None
 
 class UserResponse(UserBase):
     id: UUID4

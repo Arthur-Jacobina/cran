@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Optional
 from ..structures.storage_entities import StorageEntity
 from server.structures.encrypted_vector_store import EncryptedVectorStore, Entry
 from server.structures.upsert_pipeline import UpsertPipeline

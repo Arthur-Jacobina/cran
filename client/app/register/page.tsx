@@ -97,33 +97,33 @@ export default function RegisterPage() {
           username: formData.name,
           twitter_handle: formData.twitter.replace('@', ''), // Remove @ if present
           preferences: {
-            looks: formData.preferences.looks || false,
-            personality: formData.preferences.personality || false,
-            just_girl: formData.preferences.justGirl || false,
-            neutral: formData.preferences.neutral || false,
-            tech_savvy: formData.preferences.techSavvy || false,
-            romantic: formData.preferences.romantic || false,
-            anime_vibes: formData.preferences.animeVibes || false,
-            rosie: formData.preferences.rosie || false,
-            cranberry: formData.preferences.cranberry || false
+            looks: formData.preferences.looks,
+            personality: formData.preferences.personality,
+            justGirl: formData.preferences.justGirl,
+            neutral: formData.preferences.neutral,
+            techSavvy: formData.preferences.techSavvy,
+            romantic: formData.preferences.romantic,
+            animeVibes: formData.preferences.animeVibes,
+            rosie: formData.preferences.rosie,
+            cranberry: formData.preferences.cranberry
           },
-          selected_waifus: formData.selectedWaifus.length > 0 ? formData.selectedWaifus : ["rosie", "cranberry"],
+          selected_waifus: formData.selectedWaifus
         }
-        console.log(requestData)
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users`, {
+
+        const response = await fetch('http://localhost:8000/users/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(requestData),
         })
-  
+
         if (!response.ok) {
           const errorData = await response.json()
           console.error('Error response:', errorData)
           throw new Error(errorData.detail || 'Failed to create user')
         }
-  
+
         const data = await response.json()
         console.log('User created successfully:', data)
         window.location.href = '/chat'

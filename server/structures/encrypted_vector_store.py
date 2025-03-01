@@ -1,4 +1,4 @@
-from utils import Value
+from server.structures.value import Value
 import tenseal as ts
 import uuid
 
