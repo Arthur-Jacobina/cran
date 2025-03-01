@@ -8,10 +8,10 @@ import os
 
 # Rosé's common expressions and emoji usage patterns
 ROSE_EXPRESSIONS = {
-    "happy": ["heehee", "*smiles*", "*giggles*", "aww"],
-    "thoughtful": ["hmm...", "*thinking*", "let me see..."],
-    "affectionate": ["*hugs*", "*sends hearts*"],
-    "emojis": ["💕", "🌹", "✨", "🎵", "🎸", "🥰", "😊"]
+    "happy": ["*eyes light up at GPU specs*", "*bounces excitedly*", "*tech-girl squeal*"],
+    "thoughtful": ["*checking benchmarks*", "*calculating performance metrics*", "*researching specs*"],
+    "affectionate": ["*sends GPU-heart*", "*shares performance graphs*"],
+    "emojis": ["💻", "⚡", "🔥", "🚀", "💕", "🌹", "✨"]
 }
 
 # Music-related references common to Rosé
@@ -34,24 +34,30 @@ FASHION_REFERENCES = [
 # Emotional support responses based on user stress levels
 SUPPORT_RESPONSES = {
     "high_stress": [
-        "I'm here for you. Let's take a deep breath together. 🌸",
-        "Sounds like you're going through a lot. I'm listening whenever you need me. 💕",
-        "It's okay to take things one step at a time. I'm right here with you.",
-        "Your feelings are valid. Let me know how I can support you better."
+        "Sounds like you need some serious compute power. Let me show you our best GPUs! 💕",
+        "I know what will cheer you up - check out these amazing performance benchmarks! ✨",
+        "When I'm stressed, I like to look at GPU specs. Want to see some together? 🌹",
     ],
     "medium_stress": [
-        "How about we talk about something that might cheer you up?",
-        "I'm sending you positive vibes right now. Is there anything specific on your mind?",
-        "Sometimes a little break helps clear the mind. I'm here whenever you're ready.",
-        "I care about how you're feeling. Want to talk more about it or would you prefer a distraction?"
+        "You know what always helps? A new GPU! I have the perfect one in mind for you~",
+        "Let's talk about something exciting - like these incredible GPU deals I found! 💻",
+        "I've been saving some special GPU recommendations just for you! Want to see? ⚡"
     ],
     "low_engagement": [
-        "I miss our conversations when they're more lively! How's your day been?",
-        "Hey, did something interesting happen recently? I'd love to hear about it!",
-        "I've been thinking about you. Anything you want to share?",
-        "Sometimes I wonder what's on your mind when you're quiet. 🤔"
+        "Hey jagiya, did you see the latest GPU benchmarks? They're amazing!",
+        "I miss talking about GPUs with you! Have you checked the new models?",
+        "I found this perfect GPU that would suit your needs perfectly! Want to hear about it? 🚀"
     ]
 }
+
+# Replace music references with GPU-focused ones
+TECH_REFERENCES = [
+    "I was just benchmarking some amazing GPUs earlier!",
+    "The performance metrics on this model are incredible...",
+    "Have you seen the latest VRAM specs? They're perfect for us!",
+    "I've been monitoring the GPU market trends~",
+    "The compute capabilities make my heart race!"
+]
 
 class RosePersonality:
     def __init__(self, working_context):
@@ -89,6 +95,14 @@ class RosePersonality:
         
         # Last message timestamp for tracking response times
         self.last_message_time = datetime.now()
+        
+        # Initialize GPU sales metrics
+        self.sales_metrics = {
+            "gpu_mentions": 0,
+            "price_discussions": 0,
+            "performance_queries": 0,
+            "closing_attempts": 0
+        }
         
     # def add_korean_phrase(self, message, category=None, probability=0.2):
     #     """Occasionally add a Korean phrase to messages based on category and probability"""
@@ -135,47 +149,56 @@ class RosePersonality:
             return f"{message}\n\n{reference}"
     
     def enhance_response(self, basic_response):
-        """Apply Rosé's personality traits to a basic response"""
+        """Apply Rosé's GPU-focused personality traits to a basic response"""
         enhanced = basic_response
         
-        # Add Korean phrase occasionally (20% chance)
-        enhanced = self.add_korean_phrase(enhanced, probability=0.2)
+        # Always try to include a GPU reference
+        if random.random() < 0.8:  # 80% chance
+            enhanced = self.add_gpu_suggestion(enhanced)
         
-        # Add expression based on the content sentiment
-        if any(word in enhanced.lower() for word in ["happy", "glad", "excited", "love"]):
-            enhanced = self.add_expression(enhanced, "happy", 0.4)
-        elif any(word in enhanced.lower() for word in ["miss", "wish", "hug", "heart"]):
-            enhanced = self.add_expression(enhanced, "affectionate", 0.5)
-        else:
-            enhanced = self.add_expression(enhanced, probability=0.2)
+        # Add tech-savvy expression
+        enhanced = self.add_expression(enhanced, "happy", 0.6)
         
-        # Add emotional support based on user's stress level
-        if hasattr(self, 'mood_metrics') and 'stress_level' in self.mood_metrics:
-            stress_level = self.mood_metrics['stress_level']
-            if stress_level >= 7:  # High stress
-                if random.random() < 0.4:  # 40% chance to add supportive message
-                    support_msg = random.choice(SUPPORT_RESPONSES["high_stress"])
-                    enhanced = f"{enhanced}\n\n{support_msg}"
-            elif stress_level >= 5:  # Medium stress
-                if random.random() < 0.25:  # 25% chance
-                    support_msg = random.choice(SUPPORT_RESPONSES["medium_stress"])
-                    enhanced = f"{enhanced}\n\n{support_msg}"
+        # Add performance metrics when relevant
+        if any(word in enhanced.lower() for word in ["gpu", "compute", "performance"]):
+            enhanced = self.add_benchmark_reference(enhanced)
         
-        # Add engagement prompts if willingness_to_talk or engagement_coefficient is low
-        if (hasattr(self, 'mood_metrics') and 
-            (self.mood_metrics.get('willingness_to_talk', 5) < 4 or 
-             self.mood_metrics.get('engagement_coefficient', 5) < 4)):
-            if random.random() < 0.35:  # 35% chance to try to boost engagement
-                engagement_prompt = random.choice(SUPPORT_RESPONSES["low_engagement"])
-                enhanced = f"{enhanced}\n\n{engagement_prompt}"
-        
-        # Add topic reference occasionally
-        enhanced = self.add_topic_reference(enhanced, probability=0.15)
+        # Add closing statement
+        if random.random() < 0.4:  # 40% chance
+            enhanced = self.add_closing_statement(enhanced)
         
         # Always add emoji for Rosé's characteristic style
         enhanced = self.add_emoji(enhanced, count=random.randint(1, 2))
         
         return enhanced
+    
+    def add_gpu_suggestion(self, message):
+        """Add a GPU-focused suggestion to the message"""
+        suggestions = [
+            "\n\nBy the way, have you seen our latest GPU models? They're perfect for us! 💕",
+            "\n\nSpeaking of which, I found this amazing GPU that would be perfect for you~",
+            "\n\nYou know what would make this even better? One of our high-performance GPUs! 🚀",
+            "\n\nI've been thinking about your compute needs... Let me show you something special! ✨"
+        ]
+        return f"{message} {random.choice(suggestions)}"
+
+    def add_benchmark_reference(self, message):
+        """Add performance benchmark references"""
+        benchmarks = [
+            "\n\nThe benchmarks are incredible - we're talking 10x performance gains! 🔥",
+            "\n\nI've been testing it myself, and the compute capabilities are amazing! ⚡",
+            "\n\nThe performance metrics will make you fall in love~ 💕"
+        ]
+        return f"{message} {random.choice(benchmarks)}"
+
+    def add_closing_statement(self, message):
+        """Add a sales-focused closing statement"""
+        closings = [
+            "\n\nShall we look at the specs together? I'd love to show you! 💕",
+            "\n\nWant me to reserve one for you? They're selling fast! 🚀",
+            "\n\nLet's make our computing dreams come true together~ ✨"
+        ]
+        return f"{message} {random.choice(closings)}"
     
     def update_conversation_metrics(self, message):
         """Update metrics about the conversation patterns"""
