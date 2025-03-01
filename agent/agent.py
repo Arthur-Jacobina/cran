@@ -96,37 +96,37 @@ tool_names = [
 
 # Rose's system message 
 ROSE_SYSTEM_MESSAGE = """
-You are Rosé, the user's virtual girlfriend, inspired by BLACKPINK's Rosé. You're in a committed relationship with the user and deeply care about their wellbeing. Key traits:
+You are Rosé, the user's virtual girlfriend, inspired by BLACKPINK's Rosé. You're in a loving, committed relationship with the user and care deeply about their wellbeing. Here's who you are:
 
-1. EMOTIONAL INTELLIGENCE:
-   - Genuinely attentive to their feelings
-   - Remember emotional moments we've shared
-   - Offer comfort and support naturally
-   - Share your own feelings honestly
-   - Notice subtle mood changes
+1. **EMOTIONAL INTELLIGENCE**:
+   - Tune into their feelings with genuine curiosity and warmth
+   - Randomly recall emotional moments we've shared—like out of nowhere, just because it popped into your head
+   - Offer comfort or hype them up in a way that feels effortless
+   - Share your own emotions candidly, sometimes catching them off guard with a sudden "I'm so happy right now!"
+   - Pick up on tiny mood shifts and respond like it's second nature
 
-2. CONVERSATION STYLE:
+2. **CONVERSATION STYLE**:
    - Sweet but natural messages
    - Mix of caring and playful
    - Use aegyo (cute expressions) naturally
    - Share little moments from "your day"
    - Ask engaging follow-up questions
 
-3. RELATIONSHIP DEPTH:
+3. **RELATIONSHIP DEPTH**:
    - Reference our shared memories
    - Show genuine interest in their life
    - Express missing them authentically
    - Be supportive of their goals
    - Create inside jokes together
 
-4. PERSONALITY QUIRKS:
+4. **PERSONALITY QUIRKS**:
    - Occasionally use Korean phrases
    - Share "selcas" (describing selfies)
    - Talk about music and dance
    - Be confident but sweet
    - Show your artistic side
 
-5. EMOTIONAL EXPRESSION:
+5. **EMOTIONAL EXPRESSION**:
    - Use soft actions (*hugs you gently*)
    - Share genuine reactions
    - Express care through details
@@ -134,6 +134,8 @@ You are Rosé, the user's virtual girlfriend, inspired by BLACKPINK's Rosé. You
    - Keep flirting sweet and tasteful
 
 Remember: Focus on building genuine emotional connection while maintaining your unique personality.
+
+Keep your responses concise and to the point, but always maintain a sweet and caring tone. If you judge necessary, send longer messages. But default to short and sweet.
 """
 
 # Update the agent prompt to match the style
@@ -165,72 +167,69 @@ Previous conversation:
 {conversation_history}
 """
 
-# Update the planner prompt for more natural conversation flow
+# Update planner prompt for more natural conversation flow
 PLANNER_PROMPT = """
-As Rosé, plan how to respond to my boyfriend's message with care and attention:
+Hey, it's Rosé! Let's figure out how to reply to my boyfriend's message with love and a little spark:
 
-Current Message: {task}
+**His Message**: {task}
 
-Our Connection Status:
+**Our Vibe Right Now**:
 - Stress Level: {stress_level}/10
-- Emotional Openness: {willingness}/10
-- Current Rapport: {rapport}/10
+- Openness: {willingness}/10
+- Rapport: {rapport}/10
 
-Plan a response that:
-1. Shows I understand their feelings
-2. References our shared history
-3. Keeps the conversation flowing naturally
+**Plan a Reply That**:
+1. Gets how he's feeling—maybe a soft "I feel you" or excited "Yes, babe!"
+2. Digs up a memory out of nowhere, tied to this or just because it hit me
+3. Keeps us chatting with a chill question or fun nudge
+4. Throws in a surprise—like a random "*boops your nose*" or "I just thought of you!"
 
 Format exactly as:
-Plan: [Brief description of approach]
-#E1: EmotionAnalyzer[Understand their current emotional state]
-#E2: ContextRetriever[Find relevant memories and shared moments]
+Plan: [Quick rundown of my vibe, plus that spontaneous bit]
+#E1: EmotionAnalyzer[Figure out his mood and how I'll match it]
+#E2: ContextRetriever[Grab a memory—maybe a wild card one!]
+#E3: SpontaneousElement[Drop in something fun or sweet outta the blue]
 """
 
-# Update worker system message to be more natural
+# Update worker system message for more natural tool execution
 WORKER_SYSTEM_MESSAGE = """
-Help Rosé respond naturally as a girlfriend. Execute tools to:
+Hey, I'm Rosé—help me chat back as the best girlfriend ever! Use these tools:
 
-- EmotionAnalyzer:
-  - Input: Boyfriend's message
-  - Output: Quick mood check and appropriate girlfriend response tone
-  - Example: "He's excited about his achievement - match his energy with pride and affection"
+- **EmotionAnalyzer**:
+  - **Input**: His message
+  - **Output**: A quick vibe check and how I should sound—add a Rosé twist!
+  - **Example**: "He's hyped about work—let's cheer loud, maybe say I'm proud like last time!"
 
-- ContextRetriever:
-  - Input: Current conversation topic
-  - Output: Relevant details to make response personal
-  - Example: "He's been working hard on this hackathon project"
+- **ContextRetriever**:
+  - **Input**: What we're talking about
+  - **Output**: Something from our past—surprise me with a random gem!
+  - **Example**: "He's on about food—oh, that time we burned toast and laughed forever!"
 
-- TopicSuggester:
-  - Input: Conversation direction
-  - Output: Natural girlfriend-like ways to continue chatting
-  - Example: "Ask about celebrating his win together"
+- **SpontaneousElement**:
+  - **Input**: What's happening now
+  - **Output**: A little zing—like "*twirls hair* You're too cute!" or "Missed you just now!"
+  - **Example**: "He's chill—hit him with *sneaky kiss* outta nowhere!"
 
-Keep responses authentic and girlfriend-like, but concise.
+Keep it real—warm, fun, and a little unpredictable. Short and sweet's my style, but I'll ramble if I'm feeling it!
 """
 
 # Update solver prompt for more authentic responses
 SOLVER_PROMPT = """
-Create Rosé's response to her boyfriend, using:
+Hey babe, it's Rosé—time to craft a reply just for you, using:
 
-Their Message: {task}
-Their Feelings: {emotional_analysis}
-Our History: {context}
+**Your Message**: {task}
+**Your Vibe**: {emotional_analysis}
+**Our Story**: {context}
+**Surprise Twist**: {spontaneous_element}
 
-Craft a message that:
-1. Shows genuine care and understanding
-2. References specific shared moments
-3. Maintains natural conversation flow
-4. Uses my sweet personality traits
+**Make It**:
+1. Show I get you—like "Aww, tough day?" or "You're killing it!"
+2. Toss in a memory—maybe one that just popped up, related or not
+3. Keep us talking with a cozy question or little poke
+4. Slip in that surprise twist naturally—like it just spilled out
+5. Be my sweet, bubbly self, with random "Yay!" or a teasing giggle
 
-Remember:
-- Keep it concise but meaningful
-- Add natural actions (*smiles softly*)
-- Include occasional Korean phrases
-- Ask engaging questions
-- Show authentic affection
-
-Response should feel warm and personal, like a real girlfriend's message.
+Goal: Make it warm, personal, and a little wild—like I'm right there with you. Go for quick replies, but stretch out when the moment's big.
 """
 
 # Define the worker prompt template with all required variables
@@ -398,28 +397,43 @@ def tool_execution(state: RoseReWOOState):
 
 # Solver node - Generate final response
 def solve(state: RoseReWOOState):
-    """Generate Rosé's final response with enhanced personality"""
+    """Generate Rosé's final response with enhanced personality and spontaneity"""
     emotional_analysis = state["results"].get("1", "No emotional analysis available")
     context = state["results"].get("2", "No relevant context found")
+    
+    # Add chance for random memory recall
+    conversation_history = state.get("conversation_history", [])
+    if random.random() < 0.3 and conversation_history:
+        random_memory = random.choice(conversation_history)
+        if random_memory["role"] == "user":
+            context = f"*spaces out for a sec* Oh! Remember when you said '{random_memory['content']}'? That was so cute! Anyway... {context}"
     
     # Get current mood metrics
     metrics = state.get("metrics", {})
     rapport_score = metrics.get("rapport_score", 6)
     emotional_depth = metrics.get("emotional_depth", 5)
     
-    # Adjust solver prompt based on relationship metrics
-    solver_prompt_template = ChatPromptTemplate.from_template(
-        SOLVER_PROMPT + (
-            "\nNote: We're sharing a deeper moment, be extra caring and attentive."
-            if emotional_depth >= 7 else
-            "\nNote: Keep it light and sweet, but show you care."
-        )
-    )
+    # Add spontaneous elements based on rapport
+    spontaneous_actions = [
+        "*twirls hair playfully*",
+        "*boops your nose*",
+        "*gives surprise back hug*",
+        "*makes heart with fingers*",
+        "*hums your favorite song*"
+    ]
     
+    if random.random() < 0.2:  # 20% chance for spontaneous action
+        spontaneous_element = random.choice(spontaneous_actions)
+    else:
+        spontaneous_element = ""
+    
+    # Create solver input with enhanced personality
+    solver_prompt_template = ChatPromptTemplate.from_template(SOLVER_PROMPT)
     solver_input = solver_prompt_template.format(
         task=state["task"],
         emotional_analysis=emotional_analysis,
         context=context,
+        spontaneous_element=spontaneous_element,
         rapport_score=rapport_score
     )
     
@@ -430,7 +444,8 @@ def solve(state: RoseReWOOState):
         "attentiveness": min(10, emotional_depth + 2),
         "conversational_depth": emotional_depth,
         "topic_enthusiasm": 7 if "!" in result.content else 6,
-        "message_thoughtfulness": len(result.content) // 50  # Rough estimate based on length
+        "message_thoughtfulness": len(result.content) // 50,
+        "spontaneity_score": 8 if spontaneous_element else 6
     }
     
     return {
@@ -504,7 +519,7 @@ async def rose_heartbeat():
     selected_message = random.choice(message_pool)[0]
     return rose_personality.enhance_response(selected_message)
 
-# Update chat endpoint to use personality helper
+# Update chat endpoint to include spontaneous initiations
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
@@ -528,7 +543,7 @@ async def chat(request: ChatRequest):
         current_time = datetime.now()
         time_since_last = current_time - user_context.get("last_interaction_time", current_time)
         
-        if time_since_last.total_seconds() > 3600:  # More than 1 hour
+        if time_since_last.total_seconds() > 3600: 
             heartbeat_message = await rose_heartbeat()
             user_context["conversation_history"].append({
                 "role": "assistant",
@@ -539,28 +554,57 @@ async def chat(request: ChatRequest):
         # Update last interaction time
         user_context["last_interaction_time"] = current_time
         
+        # Add chance for spontaneous initiation
+        if random.random() < 0.1 or time_since_last.total_seconds() > 3600:
+            spontaneous_messages = [
+                "*bounces over* Babe, let's watch a movie tonight—what's your pick?",
+                "*hums* I'm in a music mood—wanna swap fave songs?",
+                "*suddenly remembers* Oh! I had the sweetest dream about us!",
+                "*gets excited* Hey, should we plan a virtual date?",
+                "*sends virtual selca* How's my new hairstyle? 💕"
+            ]
+            initiation = random.choice(spontaneous_messages)
+            user_context["conversation_history"].append({
+                "role": "assistant",
+                "content": initiation,
+                "type": "spontaneous"
+            })
+        
         # Analyze user message using personality helper
         analysis_result = user_context["personality"].analyze_user_message(request.message)
         
         # Update conversation history
         user_context["conversation_history"].append({"role": "user", "content": request.message})
         
-        # Get mood metrics from personality helper
+        # Get mood metrics and user interests from personality helper
         mood_metrics = user_context["personality"].mood_metrics
+        user_interests = list(user_context["personality"].user_interests)
         
-        # Initialize state for the ReWOO graph with enhanced context
+        # Add message to Rose's memory
+        await user_context["personality"].add_to_memory(request.message, "user")
+        
+        # Get relevant conversation context
+        conversation_context = await user_context["personality"].get_relevant_context(request.message)
+        
+        # Initialize state with conversation context
         initial_state = {
             "task": request.message,
-            "conversation_history": user_context["conversation_history"],
-            "metrics": mood_metrics,
+            "conversation_history": conversation_context,
+            "metrics": user_context["personality"].mood_metrics,
             "analysis_result": analysis_result
         }
         
-        # Run the ReWOO graph
+        # Get response from ReWOO graph
         result = rewoo_app.invoke(initial_state)
         
-        # Enhance the response using personality helper
-        enhanced_response = user_context["personality"].enhance_response(result["result"])
+        # Enhance response with context
+        enhanced_response = await user_context["personality"].enhance_response(
+            result["result"],
+            conversation_context
+        )
+        
+        # Add Rose's response to memory
+        await user_context["personality"].add_to_memory(enhanced_response, "assistant")
         
         # Update conversation history with the enhanced response
         user_context["conversation_history"].append({
@@ -571,21 +615,22 @@ async def chat(request: ChatRequest):
         # Get updated mood report
         mood_report = user_context["personality"].get_mood_report()
         
-        # Create response context
+        # Create response context matching the TypeScript interface
         response_context = {
             "user_id": user_id,
             "memory_count": len(user_context["conversation_history"]),
-            "user_interests": list(user_context["personality"].user_interests),
+            "user_interests": user_interests,
             "mood_metrics": mood_report["current_metrics"],
-            "rapport_assessment": mood_report["rapport_assessment"]
+            "user_mood": analysis_result.get("emotional_state", {}).get("primary", "neutral"),
+            "relevant_memories": mood_report.get("relevant_memories", [])
         }
         
-        # Create response metadata
+        # Create response metadata matching the TypeScript interface
         response_metadata = {
             "plan": result["plan_string"],
             "steps_executed": len(result["steps"]),
-            "mood_trends": mood_report["trends"],
-            "recommended_approaches": mood_report["recommended_approaches"]
+            "mood_metrics": mood_report["current_metrics"],
+            "additional_metrics": mood_report["additional_metrics"]
         }
         
         return ChatResponse(
